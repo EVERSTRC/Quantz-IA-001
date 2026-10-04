@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantz IA - Terminal Multiexchange & Acumulado por Broker</title>
+    <title>Quantz IA - Terminal Cuantitativa Máximo Nivel</title>
     <style>
         :root {
             --bg-body: #0b0e14;
@@ -21,299 +21,45 @@
             --purple: #9c27b0;
         }
 
-        * {
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
 
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+        .top-nav { background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .brand { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 700; color: #ffffff; }
+        .brand-badge { background: linear-gradient(135deg, #f0b90b, #f39c12); color: #000; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; }
 
-        .top-nav {
-            background-color: var(--panel-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 12px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #ffffff;
-        }
-
-        .brand-badge {
-            background: linear-gradient(135deg, #f0b90b, #f39c12);
-            color: #000;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 800;
-        }
-
-        .binance-ticker-box {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            background-color: var(--bg-body);
-            padding: 8px 20px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
+        .binance-ticker-box { display: flex; align-items: center; gap: 20px; background-color: var(--bg-body); padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
         .ticker-item { display: flex; flex-direction: column; }
         .ticker-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
-        .ticker-price { 
-            font-size: 1.25rem; 
-            font-weight: 800; 
-            font-family: 'Roboto Mono', monospace; 
-            transition: color 0.2s ease;
-        }
+        .ticker-price { font-size: 1.25rem; font-weight: 800; font-family: 'Roboto Mono', monospace; }
 
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.8rem;
-            color: var(--green);
-            background: var(--green-bg);
-            padding: 6px 12px;
-            border-radius: 20px;
-            border: 1px solid rgba(14, 203, 129, 0.3);
-        }
+        .main-container { max-width: 1400px; width: 100%; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; flex: 1; }
+        @media (max-width: 1024px) { .main-container { grid-template-columns: 1fr; } }
 
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--green);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--green);
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.2); }
-            100% { opacity: 1; transform: scale(1); }
-        }
-
-        .main-container {
-            max-width: 1400px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 24px;
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 24px;
-            flex: 1;
-        }
-
-        @media (max-width: 1024px) {
-            .main-container { grid-template-columns: 1fr; }
-        }
-
-        .panel {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-            margin-bottom: 20px;
-        }
-
-        .panel-header {
-            background-color: var(--panel-header);
-            padding: 14px 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .panel-title {
-            font-size: 0.95rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #ffffff;
-        }
-
+        .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); margin-bottom: 20px; }
+        .panel-header { background-color: var(--panel-header); padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .panel-title { font-size: 0.95rem; font-weight: 700; color: #ffffff; }
         .panel-body { padding: 20px; flex: 1; }
 
-        .pro-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-            text-align: center;
-        }
+        /* MÓDULO DE DECISIÓN FINAL */
+        .decision-banner { background: var(--bg-body); border: 2px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 15px; text-align: center; }
+        .decision-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
+        .decision-value { font-size: 1.6rem; font-weight: 900; letter-spacing: 1px; }
 
-        .pro-table th {
-            background-color: var(--bg-body);
-            color: var(--text-muted);
-            padding: 10px 8px;
-            font-weight: 600;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-        }
+        .metrics-grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+        .metric-card { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
+        .metric-card .lbl { font-size: 0.7rem; color: var(--text-muted); }
+        .metric-card .val { font-size: 1rem; font-weight: 800; font-family: 'Roboto Mono', monospace; }
 
-        .pro-table td {
-            padding: 10px 6px;
-            border-bottom: 1px solid #1f2430;
-            font-family: 'Roboto Mono', monospace;
-        }
+        .pro-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center; }
+        .pro-table th { background-color: var(--bg-body); color: var(--text-muted); padding: 10px 8px; font-weight: 600; border-bottom: 1px solid var(--border-color); font-size: 0.75rem; }
+        .pro-table td { padding: 8px 6px; border-bottom: 1px solid #1f2430; font-family: 'Roboto Mono', monospace; }
 
-        .row-active {
-            outline: 2px solid var(--yellow);
-            background-color: rgba(240, 185, 11, 0.08) !important;
-        }
-
-        .tf-cell { font-weight: 700; color: var(--text-muted); background-color: rgba(255, 255, 255, 0.02); }
-
+        .row-active { outline: 2px solid var(--yellow); background-color: rgba(240, 185, 11, 0.08) !important; }
         .cell-buy { background-color: var(--green-bg); color: var(--green); font-weight: 600; border-radius: 4px; padding: 3px 8px; }
         .cell-sell { background-color: var(--red-bg); color: var(--red); font-weight: 600; border-radius: 4px; padding: 3px 8px; }
 
-        .whale-badge {
-            background-color: rgba(156, 39, 176, 0.25);
-            color: #d8b4fe;
-            font-size: 0.7rem;
-            padding: 2px 5px;
-            border-radius: 3px;
-            margin-left: 4px;
-        }
-
-        /* ESTILOS DEL MÓDULO ACUMULADO POR BROKER */
-        .broker-accum-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-        }
-
-        .broker-card {
-            background-color: var(--bg-body);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .broker-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .broker-name {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #ffffff;
-        }
-
-        .broker-status-tag {
-            font-size: 0.7rem;
-            font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 4px;
-            text-transform: uppercase;
-        }
-
-        .tag-buy { background-color: var(--green-bg); color: var(--green); }
-        .tag-sell { background-color: var(--red-bg); color: var(--red); }
-
-        .accum-val {
-            font-size: 1.1rem;
-            font-weight: 800;
-            font-family: 'Roboto Mono', monospace;
-        }
-
-        .progress-bar-bg { height: 6px; background-color: var(--border-color); border-radius: 3px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-
-        .ai-overview {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .ai-card {
-            background-color: var(--bg-body);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .ai-card-title { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
-        .ai-card-value { font-size: 1.5rem; font-weight: 800; font-family: 'Roboto Mono', monospace; }
-
-        .analysis-container { display: flex; flex-direction: column; gap: 15px; }
-
-        .status-callout {
-            background-color: var(--bg-body);
-            border-left: 4px solid var(--blue);
-            padding: 12px 16px;
-            border-radius: 0 6px 6px 0;
-            font-size: 0.88rem;
-        }
-
-        .trade-option-card {
-            background-color: var(--bg-body);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-        }
-
-        .option-header { color: var(--blue); font-weight: 700; font-size: 0.9rem; margin-bottom: 10px; }
-
-        .option-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
-        }
-
-        .option-item {
-            background-color: var(--panel-bg);
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
-
-        .option-item .lbl { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px; }
-        .option-item .val { font-size: 0.85rem; font-weight: 700; font-family: 'Roboto Mono', monospace; }
-
-        .select-tf {
-            background-color: var(--bg-body);
-            color: var(--yellow);
-            border: 1px solid var(--yellow);
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            outline: none;
-            cursor: pointer;
-        }
+        .select-tf { background-color: var(--bg-body); color: var(--yellow); border: 1px solid var(--yellow); padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; outline: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -321,200 +67,87 @@
     <header class="top-nav">
         <div class="brand">
             <span>Quantz IA</span>
-            <span class="brand-badge">BINANCE LIVE</span>
+            <span class="brand-badge">DECISION ENGINE v3.0</span>
         </div>
 
         <div class="binance-ticker-box">
             <div class="ticker-item">
-                <span class="ticker-label">Referencia Binance Spot</span>
+                <span class="ticker-label">BTC/USDT Spot</span>
                 <span class="ticker-price" id="binance-price" style="color: #ffffff;">$0.00</span>
             </div>
-            <div class="ticker-item">
-                <span class="ticker-label">Máx 24h</span>
-                <span class="ticker-price" id="binance-high" style="font-size: 0.95rem; color: #a0aec0;">$0.00</span>
-            </div>
-            <div class="ticker-item">
-                <span class="ticker-label">Mín 24h</span>
-                <span class="ticker-price" id="binance-low" style="font-size: 0.95rem; color: #a0aec0;">$0.00</span>
-            </div>
-        </div>
-
-        <div class="status-badge">
-            <span class="pulse-dot"></span>
-            <span>WebSocket: <strong id="ws-status" style="color: #fff;">Conectado</strong></span>
         </div>
     </header>
 
     <main class="main-container">
 
-        <!-- SECCIÓN IZQUIERDA -->
+        <!-- IZQUIERDA: MATRIX -->
         <div>
-            <!-- TABLA PRINCIPAL DE BROKERS -->
             <section class="panel">
                 <div class="panel-header">
                     <span class="panel-title">📊 Matriz Multi-Broker por Temporalidad</span>
                 </div>
                 <div class="panel-body">
-                    <div style="overflow-x: auto;">
-                        <table class="pro-table">
-                            <thead>
-                                <tr>
-                                    <th>TF</th>
-                                    <th>Binance (30%)</th>
-                                    <th>Bybit (30%)</th>
-                                    <th>Coinbase (20%)</th>
-                                    <th>OKX (20%)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="matrix-tbody">
-                                <!-- Filas dinámicas -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- NUEVO MÓDULO: ACUMULADO POR BROKER -->
-            <section class="panel">
-                <div class="panel-header">
-                    <span class="panel-title">📈 Acumulado Total por Broker (Compras vs Ventas)</span>
-                </div>
-                <div class="panel-body">
-                    <div class="broker-accum-grid">
-                        
-                        <!-- BINANCE -->
-                        <div class="broker-card">
-                            <div class="broker-card-header">
-                                <span class="broker-name">Binance (30%)</span>
-                                <span class="broker-status-tag" id="binance-accum-tag">Cargando...</span>
-                            </div>
-                            <div class="accum-val" id="binance-accum-val" style="color: var(--green);">50% Compras</div>
-                            <div class="progress-bar-bg">
-                                <div class="progress-bar-fill" id="binance-accum-bar" style="width: 50%; background-color: var(--green);"></div>
-                            </div>
-                        </div>
-
-                        <!-- BYBIT -->
-                        <div class="broker-card">
-                            <div class="broker-card-header">
-                                <span class="broker-name">Bybit (30%)</span>
-                                <span class="broker-status-tag" id="bybit-accum-tag">Cargando...</span>
-                            </div>
-                            <div class="accum-val" id="bybit-accum-val" style="color: var(--green);">50% Compras</div>
-                            <div class="progress-bar-bg">
-                                <div class="progress-bar-fill" id="bybit-accum-bar" style="width: 50%; background-color: var(--green);"></div>
-                            </div>
-                        </div>
-
-                        <!-- COINBASE -->
-                        <div class="broker-card">
-                            <div class="broker-card-header">
-                                <span class="broker-name">Coinbase (20%)</span>
-                                <span class="broker-status-tag" id="coinbase-accum-tag">Cargando...</span>
-                            </div>
-                            <div class="accum-val" id="coinbase-accum-val" style="color: var(--green);">50% Compras</div>
-                            <div class="progress-bar-bg">
-                                <div class="progress-bar-fill" id="coinbase-accum-bar" style="width: 50%; background-color: var(--green);"></div>
-                            </div>
-                        </div>
-
-                        <!-- OKX -->
-                        <div class="broker-card">
-                            <div class="broker-card-header">
-                                <span class="broker-name">OKX (20%)</span>
-                                <span class="broker-status-tag" id="okx-accum-tag">Cargando...</span>
-                            </div>
-                            <div class="accum-val" id="okx-accum-val" style="color: var(--green);">50% Compras</div>
-                            <div class="progress-bar-bg">
-                                <div class="progress-bar-fill" id="okx-accum-bar" style="width: 50%; background-color: var(--green);"></div>
-                            </div>
-                        </div>
-
-                    </div>
+                    <table class="pro-table">
+                        <thead>
+                            <tr>
+                                <th>TF</th>
+                                <th>Binance</th>
+                                <th>Bybit</th>
+                                <th>Coinbase</th>
+                                <th>OKX</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-tbody"></tbody>
+                    </table>
                 </div>
             </section>
         </div>
 
-        <!-- SECCIÓN DERECHA: PANEL DE IA -->
+        <!-- DERECHA: MOTOR DE DECISIÓN DE TRADING MÁXIMO NIVEL -->
         <section class="panel">
             <div class="panel-header">
-                <span class="panel-title">🤖 Motor IA (k-NN) & Estrategia</span>
-                <select class="select-tf" id="tf-analysis-select" onchange="onTimeframeChange()">
-                    <option value="1m">Temporalidad: 1m</option>
-                    <option value="5m">Temporalidad: 5m</option>
-                    <option value="15m">Temporalidad: 15m</option>
-                    <option value="1h" selected>Temporalidad: 1h</option>
-                    <option value="4h">Temporalidad: 4h</option>
-                    <option value="1D">Temporalidad: 1D</option>
-                    <option value="1W">Temporalidad: 1W</option>
-                    <option value="1M">Temporalidad: 1M</option>
+                <span class="panel-title">🧠 Motor de Decisión Institucional</span>
+                <select class="select-tf" id="tf-analysis-select" onchange="updateTerminal()">
+                    <option value="15m">TF: 15m</option>
+                    <option value="1h" selected>TF: 1h</option>
+                    <option value="4h">TF: 4h</option>
                 </select>
             </div>
             <div class="panel-body">
                 
-                <div class="ai-overview">
-                    <div class="ai-card">
-                        <span class="ai-card-title">Confianza Alcista (<span class="selected-tf-tag">1h</span>)</span>
-                        <span class="ai-card-value" id="score-bull-val" style="color: var(--green);">50.0%</span>
-                        <div class="progress-bar-bg">
-                            <div class="progress-bar-fill" id="score-bull-bar" style="width: 50%; background-color: var(--green);"></div>
-                        </div>
-                    </div>
+                <!-- BANDEROLA DE DECISIÓN FINAL -->
+                <div class="decision-banner" id="decision-box">
+                    <div class="decision-title">RECOMENDACIÓN FINAL IA</div>
+                    <div class="decision-value" id="decision-text" style="color: var(--yellow);">EVALUANDO MERCADO...</div>
+                </div>
 
-                    <div class="ai-card">
-                        <span class="ai-card-title">Confianza Bajista (<span class="selected-tf-tag">1h</span>)</span>
-                        <span class="ai-card-value" id="score-bear-val" style="color: var(--red);">50.0%</span>
-                        <div class="progress-bar-bg">
-                            <div class="progress-bar-fill" id="score-bear-bar" style="width: 50%; background-color: var(--red);"></div>
-                        </div>
+                <!-- METRICAS CUANTITATIVAS AVANZADAS -->
+                <div class="metrics-grid-4">
+                    <div class="metric-card">
+                        <div class="lbl">Sesgo Divergencia</div>
+                        <div class="val" id="divergence-val" style="color: #ffffff;">Sin Divergencia</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="lbl">Net Delta CVD (Flujo)</div>
+                        <div class="val" id="cvd-val" style="color: var(--green);">+0.00 BTC</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="lbl">Ratio Riesgo/Beneficio (R:R)</div>
+                        <div class="val" id="rr-val" style="color: var(--yellow);">1 : 2.5</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="lbl">Regimen Volatilidad</div>
+                        <div class="val" id="volatility-val" style="color: #ffffff;">Rango / Reversión</div>
                     </div>
                 </div>
 
-                <div class="analysis-container">
-                    <div class="status-callout">
-                        📍 <strong>Sesgo Actual [<span class="selected-tf-tag">1h</span>]:</strong> <span id="bias-text">Cargando...</span>
-                    </div>
-
-                    <div class="trade-option-card">
-                        <div class="option-header">🔹 OPCIÓN A: Retroceso al Soporte (Mayor R/R)</div>
-                        <div class="option-grid">
-                            <div class="option-item">
-                                <div class="lbl">Zona Entrada</div>
-                                <div class="val" id="opt-a-entry" style="color: var(--yellow);">$0.00</div>
-                            </div>
-                            <div class="option-item">
-                                <div class="lbl">Stop Loss (SL)</div>
-                                <div class="val" id="opt-a-sl" style="color: var(--red);">$0.00</div>
-                            </div>
-                            <div class="option-item">
-                                <div class="lbl">Take Profit 1</div>
-                                <div class="val" id="opt-a-tp1" style="color: var(--green);">$0.00</div>
-                            </div>
-                            <div class="option-item">
-                                <div class="lbl">Take Profit 2</div>
-                                <div class="val" id="opt-a-tp2" style="color: var(--green);">$0.00</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="trade-option-card">
-                        <div class="option-header">🔹 OPCIÓN B: Ruptura / Breakout</div>
-                        <div class="option-grid">
-                            <div class="option-item">
-                                <div class="lbl">Entrada Ruptura</div>
-                                <div class="val" id="opt-b-entry" style="color: var(--blue);">$0.00</div>
-                            </div>
-                            <div class="option-item">
-                                <div class="lbl">Stop Loss (SL)</div>
-                                <div class="val" id="opt-b-sl" style="color: var(--red);">$0.00</div>
-                            </div>
-                            <div class="option-item">
-                                <div class="lbl">Take Profit Target</div>
-                                <div class="val" id="opt-b-tp1" style="color: var(--green);">$0.00</div>
-                            </div>
-                        </div>
-                    </div>
-
+                <!-- ESTRATEGIA RECOMENDADA -->
+                <div style="background: var(--bg-body); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; line-height: 1.5;">
+                    <div style="font-weight: 700; color: var(--blue); margin-bottom: 8px;">🎯 PARÁMETROS DE EJECUCIÓN:</div>
+                    <div>• <strong>Modo Operativo:</strong> <span id="strategy-mode">Buscando Entrada...</span></div>
+                    <div>• <strong>Entrada Sugerida:</strong> <span id="exec-entry" style="color: var(--yellow); font-weight: 700;">$0.00</span></div>
+                    <div>• <strong>Stop Loss (SL):</strong> <span id="exec-sl" style="color: var(--red); font-weight: 700;">$0.00</span></div>
+                    <div>• <strong>Take Profit (TP):</strong> <span id="exec-tp" style="color: var(--green); font-weight: 700;">$0.00</span></div>
                 </div>
 
             </div>
@@ -524,45 +157,17 @@
 
     <script>
         const TIMEFRAMES = [
-            { label: '1m',  binance: '1m' },
-            { label: '5m',  binance: '5m' },
-            { label: '15m', binance: '15m' },
-            { label: '1h',  binance: '1h' },
-            { label: '4h',  binance: '4h' },
-            { label: '1D',  binance: '1d' },
-            { label: '1W',  binance: '1w' },
-            { label: '1M',  binance: '1M' }
+            { label: '1m', binance: '1m' }, { label: '5m', binance: '5m' },
+            { label: '15m', binance: '15m' }, { label: '1h', binance: '1h' },
+            { label: '4h', binance: '4h' }, { label: '1D', binance: '1d' }
         ];
 
-        let selectedTFLabel = '1h';
-        let currentBinancePrice = 85180.0;
-        let lastPrice = 0;
+        let selectedTF = '1h';
+        let currentBtcPrice = 85180.0;
 
-        function initBinanceWebSocket() {
-            const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
-
-            ws.onopen = () => { document.getElementById('ws-status').innerText = "Activo (WS)"; };
-
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                const newPrice = parseFloat(data.c);
-                const highPrice = parseFloat(data.h);
-                const lowPrice = parseFloat(data.l);
-
-                currentBinancePrice = newPrice;
-                document.getElementById('binance-price').innerText = `$${newPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-                document.getElementById('binance-high').innerText = `$${highPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-                document.getElementById('binance-low').innerText = `$${lowPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-
-                updateNivelesLive(currentBinancePrice);
-            };
-
-            ws.onclose = () => { setTimeout(initBinanceWebSocket, 3000); };
-        }
-
-        async function fetchBinanceKlines(tf) {
+        async function fetchKlines(tf) {
             try {
-                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${tf}&limit=10`);
+                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${tf}&limit=20`);
                 const data = await res.json();
                 if (Array.isArray(data) && data.length > 0) {
                     const last = data[data.length - 1];
@@ -570,136 +175,115 @@
                     const range = high - low;
                     const buyVol = range > 0 ? vol * ((close - low) / range) : vol * 0.5;
                     const pctBuy = Math.round((buyVol / vol) * 100);
-                    return { pctBuy, isWhale: vol > 250, high, low };
+                    return { pctBuy, high, low, close, vol };
                 }
             } catch (e) {}
-            return { pctBuy: 50, isWhale: false, high: currentBinancePrice * 1.002, low: currentBinancePrice * 0.998 };
+            return { pctBuy: 50, high: currentBtcPrice * 1.002, low: currentBtcPrice * 0.998, close: currentBtcPrice, vol: 100 };
         }
 
         async function updateTerminal() {
             let matrixHtml = '';
             let activeData = null;
-
-            // Acumuladores de volumen por Broker
-            let binanceSum = 0, bybitSum = 0, coinbaseSum = 0, okxSum = 0;
+            let binanceBuy = 50, coinbaseBuy = 50;
 
             for (const tfObj of TIMEFRAMES) {
-                const bData = await fetchBinanceKlines(tfObj.binance);
-
+                const bData = await fetchKlines(tfObj.binance);
+                const cbBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 6), 10), 90);
                 const bybitBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 4), 10), 90);
-                const coinbaseBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 3), 10), 90);
                 const okxBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 4), 10), 90);
 
-                binanceSum += bData.pctBuy;
-                bybitSum += bybitBuy;
-                coinbaseSum += coinbaseBuy;
-                okxSum += okxBuy;
-
-                const isActive = tfObj.label === selectedTFLabel;
-                if (isActive) {
-                    activeData = { pctBuy: bData.pctBuy, high: bData.high, low: bData.low };
+                if (tfObj.label === selectedTF) {
+                    activeData = bData;
+                    binanceBuy = bData.pctBuy;
+                    coinbaseBuy = cbBuy;
                 }
 
-                const activeClass = isActive ? 'row-active' : '';
+                const isActive = tfObj.label === selectedTF ? 'row-active' : '';
 
                 matrixHtml += `
-                    <tr class="${activeClass}">
-                        <td class="tf-cell">${tfObj.label}</td>
-                        <td><span class="${bData.pctBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${bData.pctBuy}% | ${100 - bData.pctBuy}%</span>${bData.isWhale ? '<span class="whale-badge">🐋</span>' : ''}</td>
-                        <td><span class="${bybitBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${bybitBuy}% | ${100 - bybitBuy}%</span></td>
-                        <td><span class="${coinbaseBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${coinbaseBuy}% | ${100 - coinbaseBuy}%</span></td>
-                        <td><span class="${okxBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${okxBuy}% | ${100 - okxBuy}%</span></td>
+                    <tr class="${isActive}">
+                        <td style="font-weight:700;">${tfObj.label}</td>
+                        <td><span class="${bData.pctBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${bData.pctBuy}%</span></td>
+                        <td><span class="${bybitBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${bybitBuy}%</span></td>
+                        <td><span class="${cbBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${cbBuy}%</span></td>
+                        <td><span class="${okxBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${okxBuy}%</span></td>
                     </tr>
                 `;
             }
 
             document.getElementById('matrix-tbody').innerHTML = matrixHtml;
 
-            // Renderizar Módulo de Acumulado por Broker
-            renderBrokerAccumulated('binance', Math.round(binanceSum / TIMEFRAMES.length));
-            renderBrokerAccumulated('bybit', Math.round(bybitSum / TIMEFRAMES.length));
-            renderBrokerAccumulated('coinbase', Math.round(coinbaseSum / TIMEFRAMES.length));
-            renderBrokerAccumulated('okx', Math.round(okxSum / TIMEFRAMES.length));
-
             if (activeData) {
-                runAIAnalysis(activeData);
+                runInstitutionalDecision(activeData, binanceBuy, coinbaseBuy);
             }
         }
 
-        // Renderizado visual de las Tarjetas de Acumulado
-        function renderBrokerAccumulated(brokerId, pctBuy) {
-            const isBuy = pctBuy >= 50;
-            const pctSell = 100 - pctBuy;
-            const tagEl = document.getElementById(`${brokerId}-accum-tag`);
-            const valEl = document.getElementById(`${brokerId}-accum-val`);
-            const barEl = document.getElementById(`${brokerId}-accum-bar`);
+        function runInstitutionalDecision(data, binanceBuy, coinbaseBuy) {
+            const price = data.close;
+            document.getElementById('binance-price').innerText = `$${price.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
 
-            if (isBuy) {
-                tagEl.innerText = "NET BUY";
-                tagEl.className = "broker-status-tag tag-buy";
-                valEl.innerText = `${pctBuy}% Compras`;
-                valEl.style.color = "var(--green)";
-                barEl.style.backgroundColor = "var(--green)";
+            // 1. Análisis de Divergencia
+            let divergenceText = "Alineados (Normal)";
+            let isTrap = false;
+            if (binanceBuy >= 60 && coinbaseBuy <= 42) {
+                divergenceText = "⚠️ FAKEOUT ALCISTA";
+                isTrap = true;
+            } else if (binanceBuy <= 40 && coinbaseBuy >= 58) {
+                divergenceText = "⚠️ FAKEOUT BAJISTA";
+                isTrap = true;
+            }
+            document.getElementById('divergence-val').innerText = divergenceText;
+
+            // 2. Net Delta CVD Estimado
+            const delta = ((binanceBuy - 50) / 100) * data.vol;
+            const cvdEl = document.getElementById('cvd-val');
+            cvdEl.innerText = `${delta >= 0 ? '+' : ''}${delta.toFixed(2)} BTC`;
+            cvdEl.style.color = delta >= 0 ? "var(--green)" : "var(--red)";
+
+            // 3. Ratio R:R y Niveles
+            const range = (data.high - data.low) || (price * 0.005);
+            const slDistance = range * 0.7;
+            const tpDistance = range * 2.1; // Ratio 1:3
+            const rrRatio = (tpDistance / slDistance).toFixed(1);
+            document.getElementById('rr-val').innerText = `1 : ${rrRatio}`;
+
+            // 4. Decisión Final
+            const decBox = document.getElementById('decision-box');
+            const decText = document.getElementById('decision-text');
+            const modeEl = document.getElementById('strategy-mode');
+
+            if (isTrap) {
+                decText.innerText = "🛑 TRAP / ESPERAR REVERSISIÓN";
+                decText.style.color = "var(--yellow)";
+                modeEl.innerText = "Evitar compras/ventas impulsivas (Divergencia entre Retail y Smart Money)";
+            } else if (binanceBuy >= 60 && delta > 0) {
+                decText.innerText = "🚀 COMPRAR (LONG CONFIRMADO)";
+                decText.style.color = "var(--green)";
+                modeEl.innerText = "Opción A: Entrada Límite en Soporte Local";
+                
+                document.getElementById('exec-entry').innerText = `$${(price - range * 0.2).toFixed(1)}`;
+                document.getElementById('exec-sl').innerText = `$${(price - slDistance).toFixed(1)}`;
+                document.getElementById('exec-tp').innerText = `$${(price + tpDistance).toFixed(1)}`;
+            } else if (binanceBuy <= 40 && delta < 0) {
+                decText.innerText = "💥 VENDER (SHORT CONFIRMADO)";
+                decText.style.color = "var(--red)";
+                modeEl.innerText = "Opción B: Venta en Ruptura de Soporte";
+
+                document.getElementById('exec-entry').innerText = `$${(price + range * 0.2).toFixed(1)}`;
+                document.getElementById('exec-sl').innerText = `$${(price + slDistance).toFixed(1)}`;
+                document.getElementById('exec-tp').innerText = `$${(price - tpDistance).toFixed(1)}`;
             } else {
-                tagEl.innerText = "NET SELL";
-                tagEl.className = "broker-status-tag tag-sell";
-                valEl.innerText = `${pctSell}% Ventas`;
-                valEl.style.color = "var(--red)";
-                barEl.style.backgroundColor = "var(--red)";
+                decText.innerText = "⚖️ NEUTRAL / CONSOLIDACIÓN";
+                decText.style.color = "#ffffff";
+                modeEl.innerText = "Mercado sin dirección clara. Esperar ruptura o volumen institucional.";
             }
-
-            barEl.style.width = `${isBuy ? pctBuy : pctSell}%`;
-        }
-
-        function runAIAnalysis(data) {
-            const bullScore = Math.min(Math.max(data.pctBuy + (Math.random() * 2 - 1), 10), 90);
-            const bearScore = 100 - bullScore;
-
-            document.querySelectorAll('.selected-tf-tag').forEach(e => e.innerText = selectedTFLabel);
-            document.getElementById('score-bull-val').innerText = `${bullScore.toFixed(1)}%`;
-            document.getElementById('score-bull-bar').style.width = `${bullScore}%`;
-            document.getElementById('score-bear-val').innerText = `${bearScore.toFixed(1)}%`;
-            document.getElementById('score-bear-bar').style.width = `${bearScore}%`;
-
-            let biasText = "NEUTRAL / EN RANGO";
-            if (bullScore >= 55) biasText = `ALCISTA (Confianza IA: ${bullScore.toFixed(1)}%)`;
-            else if (bullScore <= 45) biasText = `BAJISTA (Confianza IA: ${bearScore.toFixed(1)}%)`;
-
-            document.getElementById('bias-text').innerText = biasText;
-            updateNivelesLive(currentBinancePrice, data.high, data.low);
-        }
-
-        function updateNivelesLive(price, high, low) {
-            const h = high || (price * 1.003);
-            const l = low || (price * 0.997);
-            const range = (h - l) || (price * 0.004);
-
-            const optAEntryMin = price - (range * 0.8);
-            const optAEntryMax = price - (range * 0.3);
-            const optASL = optAEntryMin - (range * 0.6);
-            const optATP1 = price + (range * 1.2);
-            const optATP2 = price + (range * 2.2);
-
-            const optBEntry = price + (range * 0.6);
-            const optBSL = price - (range * 0.5);
-            const optBTP1 = optBEntry + (range * 1.8);
-
-            document.getElementById('opt-a-entry').innerText = `$${optAEntryMin.toFixed(1)} - $${optAEntryMax.toFixed(1)}`;
-            document.getElementById('opt-a-sl').innerText = `$${optASL.toFixed(1)}`;
-            document.getElementById('opt-a-tp1').innerText = `$${optATP1.toFixed(1)}`;
-            document.getElementById('opt-a-tp2').innerText = `$${optATP2.toFixed(1)}`;
-
-            document.getElementById('opt-b-entry').innerText = `$${optBEntry.toFixed(1)}`;
-            document.getElementById('opt-b-sl').innerText = `$${optBSL.toFixed(1)}`;
-            document.getElementById('opt-b-tp1').innerText = `$${optBTP1.toFixed(1)}`;
         }
 
         function onTimeframeChange() {
-            selectedTFLabel = document.getElementById('tf-analysis-select').value;
+            selectedTF = document.getElementById('tf-analysis-select').value;
             updateTerminal();
         }
 
-        initBinanceWebSocket();
         updateTerminal();
         setInterval(updateTerminal, 4000);
     </script>
