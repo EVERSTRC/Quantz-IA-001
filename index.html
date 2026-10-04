@@ -3,148 +3,484 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradingView Indicator - Top 4 Brokers + IA</title>
+    <title>Quantz IA - Terminal Multiexchange BTC/USDT</title>
     <style>
         :root {
-            --tv-bg: #131722;
-            --tv-card-bg: #1e222d;
-            --tv-border: #2a2e39;
-            --tv-text: #d1d4dc;
-            --tv-text-muted: #787b86;
-            --tv-green: #089981;
-            --tv-red: #f23645;
-            --tv-blue: #2962ff;
-            --tv-purple: #8e24aa;
-            --tv-yellow: #f5a623;
+            --bg-body: #0b0e14;
+            --panel-bg: #151924;
+            --panel-header: #1c212f;
+            --border-color: #2a2e3d;
+            --text-main: #e1e4ea;
+            --text-muted: #848e9c;
+            --green: #0ecb81;
+            --green-bg: rgba(14, 203, 129, 0.15);
+            --red: #f6465d;
+            --red-bg: rgba(246, 70, 93, 0.15);
+            --blue: #2962ff;
+            --purple: #9c27b0;
+            --yellow: #f0b90b;
         }
 
         * {
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            background-color: var(--tv-bg);
-            color: var(--tv-text);
-            margin: 0;
-            padding: 20px;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: flex-end; /* Alineado a la derecha como en TradingView */
+        }
+
+        /* --- BARRA SUPERIOR (HEADER) --- */
+        .top-nav {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
             gap: 15px;
         }
 
-        /* --- DASHBOARD SUPERIOR DERECHO --- */
-        .dash-table {
-            background-color: #0f1218;
-            border: 1px solid #282d37;
-            border-collapse: collapse;
-            font-size: 11px;
-            width: 320px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        }
-
-        .dash-table th, .dash-table td {
-            padding: 4px 6px;
-            border: 1px solid #282d37;
-            text-align: center;
-            white-space: nowrap;
-        }
-
-        .dash-table th {
-            background-color: #282d37;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
             color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #2962ff, #9c27b0);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 800;
+        }
+
+        .market-ticker {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background-color: var(--bg-body);
+            padding: 6px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .ticker-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ticker-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .ticker-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--green);
+            background: var(--green-bg);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(14, 203, 129, 0.3);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--green);
+        }
+
+        /* --- CONTENEDOR PRINCIPAL --- */
+        .main-container {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            flex: 1;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- PANELES --- */
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .panel-header {
+            background-color: var(--panel-header);
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+        }
+
+        .panel-body {
+            padding: 20px;
+            flex: 1;
+        }
+
+        /* --- MÉTRICAS DE IA --- */
+        .ai-overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .ai-card {
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ai-card-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
             font-weight: 600;
         }
 
-        .dash-table td.tf-col {
-            background-color: #1e222d;
-            color: #808080;
-            font-weight: bold;
+        .ai-card-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            font-family: 'Roboto Mono', monospace;
         }
 
-        .cell-green { background-color: rgb(16, 120, 60); color: #ffffff; font-weight: 500; }
-        .cell-red { background-color: rgb(180, 40, 50); color: #ffffff; font-weight: 500; }
+        .progress-bar-bg {
+            height: 6px;
+            background-color: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
 
-        .row-now { background-color: #10783c; color: #ffffff; font-weight: bold; }
-        .row-news { background-color: #50505a; color: #ffffff; font-weight: bold; }
-        .row-ai { background-color: #323741; color: #ffffff; font-weight: bold; }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
 
-        /* --- RECUADRO DE ANÁLISIS ESTRUCTURAL IA --- */
-        .ia-box {
-            background-color: rgba(20, 24, 35, 0.95);
-            border: 1px solid var(--tv-border);
+        /* --- TABLA DE BROKERS --- */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .pro-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .pro-table th {
+            background-color: var(--bg-body);
+            color: var(--text-muted);
+            padding: 10px 8px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .pro-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #1f2430;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .tf-cell {
+            font-weight: 700;
+            color: var(--text-muted);
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .cell-buy {
+            background-color: var(--green-bg);
+            color: var(--green);
+            font-weight: 600;
+            border-radius: 4px;
+        }
+
+        .cell-sell {
+            background-color: var(--red-bg);
+            color: var(--red);
+            font-weight: 600;
+            border-radius: 4px;
+        }
+
+        .whale-badge {
+            background-color: rgba(156, 39, 176, 0.2);
+            color: #d8b4fe;
+            font-size: 0.7rem;
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-left: 4px;
+        }
+
+        .row-summary {
+            font-weight: 700;
+            text-align: center;
+            padding: 10px;
             border-radius: 6px;
-            padding: 12px 15px;
-            width: 480px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            line-height: 1.5;
-            color: #ffffff;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
         }
 
-        .ia-box .header {
-            font-weight: bold;
+        /* --- MÓDULO ESTRUCTURAL IA --- */
+        .analysis-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .status-callout {
+            background-color: var(--bg-body);
+            border-left: 4px solid var(--blue);
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.88rem;
+        }
+
+        .trade-option-card {
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .option-header {
+            color: var(--blue);
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 6px;
-            margin-bottom: 4px;
         }
 
-        .ia-box .divider {
-            color: #434651;
-            margin-bottom: 8px;
+        .option-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
         }
 
-        .ia-box .section-title {
-            color: #2962ff;
-            font-weight: bold;
-            margin-top: 8px;
+        .option-item {
+            background-color: var(--panel-bg);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
         }
 
-        .ia-box .bullet {
-            padding-left: 10px;
-            color: #d1d4dc;
+        .option-item .lbl {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 2px;
         }
 
-        .status-header {
-            align-self: center;
-            margin-bottom: 10px;
-            font-size: 13px;
-            color: var(--tv-text-muted);
+        .option-item .val {
+            font-size: 0.85rem;
+            font-weight: 700;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .select-tf {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            outline: none;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <div class="status-header">
-        BTC/USDT Promedio: <strong id="live-price" style="color: #ffffff;">$85,180.04</strong> | 
-        Estado APIs: <span id="api-status" style="color: var(--tv-green);">● En Vivo</span>
-    </div>
+    <!-- BARRA SUPERIOR -->
+    <header class="top-nav">
+        <div class="brand">
+            <span>Quantz IA</span>
+            <span class="brand-badge">PRO TERMINAL</span>
+        </div>
 
-    <!-- 1. DASHBOARD PRINCIPAL DE 4 BROKERS -->
-    <table class="dash-table">
-        <thead>
-            <tr>
-                <th style="color: #808080;">TF</th>
-                <th>Binance</th>
-                <th>Bybit</th>
-                <th>Coinbase</th>
-                <th>OKX</th>
-            </tr>
-        </thead>
-        <tbody id="dash-rows">
-            <!-- Filas de temporalidades generadas dinámicamente -->
-        </tbody>
-    </table>
+        <div class="market-ticker">
+            <div class="ticker-item">
+                <span class="ticker-label">Activo</span>
+                <span class="ticker-value" style="color: #ffffff;">BTC / USDT</span>
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-label">Precio Promedio Global</span>
+                <span class="ticker-value" id="global-price" style="color: var(--yellow);">$0.00</span>
+            </div>
+        </div>
 
-    <!-- 2. RECUADRO DE ANÁLISIS ESTRUCTURAL IA -->
-    <div class="ia-box" id="ia-analysis-box">
-        <div class="header">🤖 ANÁLISIS ESTRUCTURAL IA (<span id="current-tf-label">60</span>)</div>
-        <div class="divider">--------------------------------------------------</div>
-        <div id="ia-content">Cargando datos y sincronizando con brokers...</div>
-    </div>
+        <div class="status-badge">
+            <span class="pulse-dot"></span>
+            <span>APIs en Vivo</span>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="main-container">
+
+        <!-- PANEL IZQUIERDO: DASHBOARD DE BROKERS -->
+        <section class="panel">
+            <div class="panel-header">
+                <span class="panel-title">📊 Matriz de Flujo de Volumen Multi-Broker</span>
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="pro-table">
+                        <thead>
+                            <tr>
+                                <th>TF</th>
+                                <th>Binance (30%)</th>
+                                <th>Bybit (30%)</th>
+                                <th>Coinbase (20%)</th>
+                                <th>OKX (20%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-tbody">
+                            <!-- Filas dinámicas -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL DERECHO: MOTOR DE INTELIGENCIA ARTIFICIAL -->
+        <section class="panel">
+            <div class="panel-header">
+                <span class="panel-title">🤖 Motor IA (k-NN) & Estrategia Quant</span>
+                <select class="select-tf" id="tf-analysis-select" onchange="updateDashboard()">
+                    <option value="60">Analizar TF: 1 Hora</option>
+                    <option value="15">Analizar TF: 15 Minutos</option>
+                    <option value="240">Analizar TF: 4 Horas</option>
+                </select>
+            </div>
+            <div class="panel-body">
+                
+                <!-- Tarjetas de IA -->
+                <div class="ai-overview">
+                    <div class="ai-card">
+                        <span class="ai-card-title">Confianza Alcista (Bull Score)</span>
+                        <span class="ai-card-value" id="score-bull-val" style="color: var(--green);">50.0%</span>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="score-bull-bar" style="width: 50%; background-color: var(--green);"></div>
+                        </div>
+                    </div>
+
+                    <div class="ai-card">
+                        <span class="ai-card-title">Confianza Bajista (Bear Score)</span>
+                        <span class="ai-card-value" id="score-bear-val" style="color: var(--red);">50.0%</span>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="score-bear-bar" style="width: 50%; background-color: var(--red);"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Análisis Estructural -->
+                <div class="analysis-container">
+                    <div class="status-callout" id="callout-bias">
+                        📍 <strong>Sesgo Actual:</strong> <span id="bias-text">Calculando...</span>
+                    </div>
+
+                    <!-- Opción A: Retroceso -->
+                    <div class="trade-option-card">
+                        <div class="option-header">🔹 OPCIÓN A: Retroceso al Soporte (Mayor R/R)</div>
+                        <div class="option-grid">
+                            <div class="option-item">
+                                <div class="lbl">Zona Entrada</div>
+                                <div class="val" id="opt-a-entry" style="color: var(--yellow);">$0.00</div>
+                            </div>
+                            <div class="option-item">
+                                <div class="lbl">Stop Loss (SL)</div>
+                                <div class="val" id="opt-a-sl" style="color: var(--red);">$0.00</div>
+                            </div>
+                            <div class="option-item">
+                                <div class="lbl">Take Profit 1</div>
+                                <div class="val" id="opt-a-tp1" style="color: var(--green);">$0.00</div>
+                            </div>
+                            <div class="option-item">
+                                <div class="lbl">Take Profit 2</div>
+                                <div class="val" id="opt-a-tp2" style="color: var(--green);">$0.00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Opción B: Ruptura -->
+                    <div class="trade-option-card">
+                        <div class="option-header">🔹 OPCIÓN B: Ruptura / Breakout</div>
+                        <div class="option-grid">
+                            <div class="option-item">
+                                <div class="lbl">Entrada Ruptura</div>
+                                <div class="val" id="opt-b-entry" style="color: var(--blue);">$0.00</div>
+                            </div>
+                            <div class="option-item">
+                                <div class="lbl">Stop Loss (SL)</div>
+                                <div class="val" id="opt-b-sl" style="color: var(--red);">$0.00</div>
+                            </div>
+                            <div class="option-item">
+                                <div class="lbl">Take Profit Target</div>
+                                <div class="val" id="opt-b-tp1" style="color: var(--green);">$0.00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+    </main>
 
     <script>
         const TIMEFRAMES = [
@@ -158,7 +494,6 @@
             { label: '1M',  binance: '1M',  bybit: 'M',   coinbase: '86400', okx: '1M' }
         ];
 
-        const WEIGHTS = { binance: 0.30, bybit: 0.30, coinbase: 0.20, okx: 0.20 };
         let knnHistory = [];
 
         function parseKlines(klines) {
@@ -212,14 +547,14 @@
             return { bullScore, bearScore: 100 - bullScore };
         }
 
-        async function updateFullDashboard() {
+        async function updateDashboard() {
             try {
                 const rows = await Promise.all(TIMEFRAMES.map(fetchTFRow));
 
-                // Precio de referencia en vivo
+                // Precio global
                 const validPrices = [rows[0].b1.close, rows[0].b2.close, rows[0].b3.close, rows[0].b4.close].filter(p => p > 0);
                 const avgPrice = validPrices.reduce((a, b) => a + b, 0) / (validPrices.length || 1);
-                document.getElementById('live-price').innerText = `$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                document.getElementById('global-price').innerText = `$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
 
                 // Ponderaciones (1m + 5m)
                 const row1m = rows[0], row5m = rows[1];
@@ -230,73 +565,55 @@
                 const shortWhales = (row1m.b1.isWhale?1:0) + (row1m.b2.isWhale?1:0) + (row1m.b3.isWhale?1:0) + (row1m.b4.isWhale?1:0) +
                                     (row5m.b1.isWhale?1:0) + (row5m.b2.isWhale?1:0) + (row5m.b3.isWhale?1:0) + (row5m.b4.isWhale?1:0);
 
-                const { bullScore } = calculateKNN(avgNow, shortWhales);
+                const { bullScore, bearScore } = calculateKNN(avgNow, shortWhales);
 
-                // Renderizar Tabla
-                renderDashboardRows(rows, avgNow, shortWhales, bullScore);
+                // Renderizar métricas
+                document.getElementById('score-bull-val').innerText = `${bullScore.toFixed(1)}%`;
+                document.getElementById('score-bull-bar').style.width = `${bullScore}%`;
+                document.getElementById('score-bear-val').innerText = `${bearScore.toFixed(1)}%`;
+                document.getElementById('score-bear-bar').style.width = `${bearScore}%`;
 
-                // Renderizar Análisis Estructural IA
-                renderIAAnalysis(avgPrice, row1m.b1.high, row1m.b1.low, bullScore, avgNow);
+                renderMatrixRows(rows, avgNow, shortWhales, bullScore);
+                renderNivelesTrading(avgPrice, row1m.b1.high, row1m.b1.low, bullScore);
 
             } catch (e) {
-                console.error("Error al actualizar datos:", e);
+                console.error("Error cargando dashboard:", e);
             }
         }
 
-        function renderDashboardRows(rows, avgNow, shortWhales, bullScore) {
-            const tbody = document.getElementById('dash-rows');
+        function renderMatrixRows(rows, avgNow, shortWhales, bullScore) {
+            const tbody = document.getElementById('matrix-tbody');
             let html = '';
 
             rows.forEach(r => {
                 const brokers = [r.b1, r.b2, r.b3, r.b4];
-                html += `<tr><td class="tf-col">${r.tf}</td>`;
+                html += `<tr><td class="tf-cell">${r.tf}</td>`;
                 brokers.forEach(b => {
                     const pctB = b.pctBuy;
                     const pctS = 100 - pctB;
-                    const cls = pctB >= 50 ? 'cell-green' : 'cell-red';
-                    html += `<td class="${cls}">${pctB}% | ${pctS}%${b.isWhale ? ' 🐋' : ''}</td>`;
+                    const cls = pctB >= 50 ? 'cell-buy' : 'cell-sell';
+                    html += `<td><span class="${cls}">${pctB}% | ${pctS}%</span>${b.isWhale ? '<span class="whale-badge">🐋</span>' : ''}</td>`;
                 });
                 html += `</tr>`;
             });
 
-            // Fila AHORA MISMO
-            let actText = "⏳ Mercado en Espera", actBg = "rgb(70, 75, 85)";
-            if (shortWhales >= 2) { actText = "🐋 Ballenas Absorbiendo"; actBg = "rgb(130, 50, 200)"; }
-            else if (avgNow >= 60) { actText = "🚀 Comprando con Fuerza"; actBg = "rgb(16, 120, 60)"; }
-            else if (avgNow <= 40) { actText = "💥 Vendiendo con Fuerza"; actBg = "rgb(180, 40, 50)"; }
+            // Resumen de estado
+            let actText = "⏳ Mercado en Espera", actBg = "rgba(255,255,255,0.05)", actColor = "#ffffff";
+            if (shortWhales >= 2) { actText = "🐋 Ballenas Absorbiendo"; actBg = "rgba(156,39,176,0.2)"; actColor = "#d8b4fe"; }
+            else if (avgNow >= 60) { actText = "🚀 Presión Compradora Fuerte"; actBg = "var(--green-bg)"; actColor = "var(--green)"; }
+            else if (avgNow <= 40) { actText = "💥 Presión Vendedora Fuerte"; actBg = "var(--red-bg)"; actColor = "var(--red)"; }
 
             html += `
                 <tr>
-                    <td class="tf-col" style="color: #00ffff;">AHORA MISMO</td>
-                    <td colspan="4" style="background-color: ${actBg}; color: #ffffff; font-weight: bold;">${actText}</td>
-                </tr>
-            `;
-
-            // Fila SESGO NOTICIA
-            html += `
-                <tr>
-                    <td class="tf-col" style="color: #ffff00;">SESGO NOTICIA</td>
-                    <td colspan="4" class="row-news">⚖️ NEUTRAL</td>
-                </tr>
-            `;
-
-            // Fila PREDICCIÓN IA
-            let aiText = `🤖 IA: NEUTRAL / BULL (${bullScore.toFixed(1)}%)`;
-            let aiBg = "rgb(50, 55, 65)";
-            if (bullScore >= 65) { aiText = `🤖 IA: COMPRAR (${bullScore.toFixed(1)}%)`; aiBg = "rgb(16, 120, 60)"; }
-            else if (bullScore <= 35) { aiText = `🤖 IA: VENDER (${(100 - bullScore).toFixed(1)}%)`; aiBg = "rgb(180, 40, 50)"; }
-
-            html += `
-                <tr>
-                    <td class="tf-col" style="color: #ff00ff;">PREDICCIÓN IA</td>
-                    <td colspan="4" style="background-color: ${aiBg}; color: #ffffff; font-weight: bold;">${aiText}</td>
+                    <td class="tf-cell" style="color: var(--yellow);">AHORA</td>
+                    <td colspan="4"><div class="row-summary" style="background-color: ${actBg}; color: ${actColor};">${actText}</div></td>
                 </tr>
             `;
 
             tbody.innerHTML = html;
         }
 
-        function renderIAAnalysis(price, high, low, bullScore, avgNow) {
+        function renderNivelesTrading(price, high, low, bullScore) {
             const atr = (high - low) || (price * 0.005);
             
             const entryMin = Math.max(low, price - (atr * 1.5));
@@ -309,35 +626,26 @@
             const optBSl = price - (atr * 1.0);
             const optBTp1 = optBEntry + (atr * 2.5);
 
-            let bias = "NEUTRAL / EN RANGO";
-            if (bullScore >= 65) bias = `ALCISTA (IA ${bullScore.toFixed(1)}%)`;
-            else if (bullScore <= 35) bias = `BAJISTA (IA ${(100 - bullScore).toFixed(1)}%)`;
+            let biasText = "NEUTRAL / EN RANGO";
+            if (bullScore >= 65) biasText = `ALCISTA (Confianza IA: ${bullScore.toFixed(1)}%)`;
+            else if (bullScore <= 35) biasText = `BAJISTA (Confianza IA: ${(100 - bullScore).toFixed(1)}%)`;
 
-            const html = `
-                <div>📍 <strong>Sesgo Actual:</strong> ${bias}</div>
-                <div style="color: #f5a623;">⚠️ ZONA NEUTRA: Evitar operar cerca de $${Math.round(price)}</div>
-                
-                <div class="section-title">🔹 OPCIÓN A: Retroceso al Soporte (Mayor R/R)</div>
-                <div class="bullet">• Entrada (Limit): $${entryMin.toFixed(1)} - $${entryMax.toFixed(1)}</div>
-                <div class="bullet">• Stop Loss (SL): $${sl.toFixed(1)}</div>
-                <div class="bullet">• Take Profit: TP1 $${Math.round(tp1)} | TP2 $${Math.round(tp2)}</div>
+            document.getElementById('bias-text').innerText = biasText;
 
-                <div class="section-title">🔹 OPCIÓN B: Ruptura / Confirmación</div>
-                <div class="bullet">• Entrada: Cierre sobre $${optBEntry.toFixed(1)} con volumen</div>
-                <div class="bullet">• Confirmación IA: Score > 65% + Señal BUY</div>
-                <div class="bullet">• Stop Loss (SL): $${optBSl.toFixed(1)}</div>
-                <div class="bullet">• Take Profit: $${optBTp1.toFixed(1)}</div>
+            // Opción A
+            document.getElementById('opt-a-entry').innerText = `$${entryMin.toFixed(1)} - $${entryMax.toFixed(1)}`;
+            document.getElementById('opt-a-sl').innerText = `$${sl.toFixed(1)}`;
+            document.getElementById('opt-a-tp1').innerText = `$${tp1.toFixed(1)}`;
+            document.getElementById('opt-a-tp2').innerText = `$${tp2.toFixed(1)}`;
 
-                <br/>
-                <div>💡 <strong>Resumen:</strong> ${avgNow >= 55 ? "Presión compradora en Dashboard." : "Mercado en consolidación."} Buscar entradas en $${entryMin.toFixed(1)} o ruptura de $${optBEntry.toFixed(1)}.</div>
-            `;
-
-            document.getElementById('ia-content').innerHTML = html;
+            // Opción B
+            document.getElementById('opt-b-entry').innerText = `$${optBEntry.toFixed(1)}`;
+            document.getElementById('opt-b-sl').innerText = `$${optBSl.toFixed(1)}`;
+            document.getElementById('opt-b-tp1').innerText = `$${optBTp1.toFixed(1)}`;
         }
 
-        // Bucle continuo de actualización cada 5 segundos
-        updateFullDashboard();
-        setInterval(updateFullDashboard, 5000);
+        updateDashboard();
+        setInterval(updateDashboard, 5000);
     </script>
 </body>
 </html>
