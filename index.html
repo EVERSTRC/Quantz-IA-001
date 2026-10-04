@@ -1,1 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Trading 4 Brokers + IA (k-NN)</title>
+    <style>
+        :root {
+            --bg-dark: #0f1218;
+            --card-bg: #1e222d;
+            --cell-bg: #1e222d;
+            --border-color: #282d37;
+            --text-main: #ffffff;
+            --text-muted: #808080;
+            --green: #10783c;
+            --red: #b42832;
+            --accent: #00ffff;
+            --purple: #8232ca;
+        }
 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            color: #f0f0f0;
+        }
+
+        /* Tabla del Dashboard */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        th, td {
+            padding: 8px 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #282d35;
+            color: var(--text-muted);
+        }
+
+        .cell-green { background-color: var(--green); color: white; }
+        .cell-red { background-color: var(--red); color: white; }
+        .cell-header { background-color: #1e222d; color: var(--text-muted); font-weight: bold; }
+
+        .merged-row {
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Estilos del Módulo de IA */
+        .ai-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .metric-box {
+            background: #141720;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .metric-box .title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .metric-box .value {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .analysis-text {
+            background-color: #141720;
+            border: 1px solid var(--border-color);
+            border-left: 4px solid #3b82f6;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            color: #e2e8f0;
+        }
+
+        .status-bar {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 style="margin-bottom: 5px; font-size: 1.6rem;">Dashboard Multi-Broker + Motor IA (k-NN)</h1>
+    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Simulación HTML/JS de Pine Script con conexión en tiempo real</p>
+
+    <div class="container">
+        <div class="status-bar">
+            <span>Precio BTC Promedio: <strong id="btc-price" style="color: var(--accent);">$0.00</strong></span>
+            <span>RSI (14): <strong id="rsi-val">0.0</strong></span>
+            <span>Estado: <strong id="api-status" style="color: var(--green);">Conectado</strong></span>
+        </div>
+
+        <!-- DASHBOARD DE BROKERS -->
+        <div class="card">
+            <h2>📊 Dashboard de Presión (Compradores % | Vendedores %)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>TF</th>
+                        <th>Binance (30%)</th>
+                        <th>Bybit (30%)</th>
+                        <th>Coinbase (20%)</th>
+                        <th>OKX (20%)</th>
+                    </tr>
+                </thead>
+                <tbody id="dashboard-body">
+                    <!-- Filas generadas por JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- MÓDULO IA Y ESTRATEGIA -->
+        <div class="card">
+            <h2>🤖 Motor IA k-NN & Análisis Estructural</h2>
+            
+            <div class="ai-metrics">
+                <div class="metric-box">
+                    <div class="title">Score IA Alcista</div>
+                    <div class="value" id="ai-bull" style="color: #4ade80;">50.0%</div>
+                </div>
+                <div class="metric-box">
+                    <div class="title">Score IA Bajista</div>
+                    <div class="value" id="ai-bear" style="color: #f87171;">50.0%</div>
+                </div>
+            </div>
+
+            <div class="analysis-text" id="analysis-box">Cargando datos y procesando vecinos k-NN...</div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración y Parámetros
+        const WEIGHTS = { binance: 0.30, bybit: 0.30, coinbase: 0.20, okx: 0.20 };
+        const KNN_WINDOW = 100;
+        const MIN_CONFIDENCE = 65.0;
+        
+        let knnHistory = []; // Buffer de memoria para k-NN
+        let currentRsi = 50.0;
+        let lastPrice = 0;
+
+        // --- 1. CAPTURA DE DATOS DESDE LAS APIS ---
+        async function fetchBinance() {
+            const res = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=20');
+            const data = await res.json();
+            return parseKlines(data);
+        }
+
+        async function fetchBybit() {
+            const res = await fetch('https://api.bybit.com/v5/market/kline?category=spot&symbol=BTCUSDT&interval=1&limit=20');
+            const data = await res.json();
+            // Normalizar formato de Bybit
+            const klines = data.result.list.map(d => [d[0], d[1], d[2], d[3], d[4], d[5]]);
+            return parseKlines(klines);
+        }
+
+        async function fetchCoinbase() {
+            const res = await fetch('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=60');
+            const data = await res.json();
+            // Normalizar formato de Coinbase [time, low, high, open, close, volume]
+            const klines = data.slice(0, 20).map(d => [d[0]*1000, d[3], d[2], d[1], d[4], d[5]]);
+            return parseKlines(klines);
+        }
+
+        async function fetchOKX() {
+            const res = await fetch('https://www.okx.com/api/v5/market/candles?instId=BTC-USDT&bar=1m&limit=20');
+            const data = await res.json();
+            // Normalizar formato OKX [ts, o, h, l, c, vol, volCcy...]
+            const klines = data.data.map(d => [d[0], d[1], d[2], d[3], d[4], d[5]]);
+            return parseKlines(klines);
+        }
+
+        // Lógica f_calc() de Pine Script
+        function parseKlines(klines) {
+            if(!klines || klines.length === 0) return { pctBuy: 50, isWhale: false, close: 0, high: 0, low: 0 };
+            
+            let totalVol = 0;
+            let sumBuyVol = 0;
+            let volumes = [];
+
+            klines.forEach(k => {
+                const high = parseFloat(k[2]);
+                const low = parseFloat(k[3]);
+                const close = parseFloat(k[4]);
+                const vol = parseFloat(k[5]);
+                
+                const range = high - low;
+                const buyVol = range > 0 ? vol * ((close - low) / range) : vol * 0.5;
+                
+                totalVol += vol;
+                sumBuyVol += buyVol;
+                volumes.push(vol);
+            });
+
+            const lastCandle = klines[0]; // Última vela
+            const close = parseFloat(lastCandle[4]);
+            const high = parseFloat(lastCandle[2]);
+            const low = parseFloat(lastCandle[3]);
+
+            const pctBuy = totalVol > 0 ? Math.round((sumBuyVol / totalVol) * 100) : 50;
+            const avgVol = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+            const isWhale = volumes[0] > (avgVol * 2.0);
+
+            return { pctBuy, isWhale, close, high, low };
+        }
+
+        // --- 2. CÁLCULO DE RSI SIMPLIFICADO ---
+        function updateRSI(newPrice) {
+            if (lastPrice === 0) { lastPrice = newPrice; return 50; }
+            let change = newPrice - lastPrice;
+            let gain = change > 0 ? change : 0;
+            let loss = change < 0 ? -change : 0;
+            
+            // Suavizado RSI aproximado en vivo
+            currentRsi = (currentRsi * 13 + (gain / (gain + loss || 1)) * 100) / 14;
+            lastPrice = newPrice;
+            return Math.min(Math.max(currentRsi, 10), 90);
+        }
+
+        // --- 3. ALGORITMO MACHINE LEARNING (k-NN) ---
+        function runKNN(avgNow, whalesCount, rsi) {
+            const f1 = avgNow / 100.0;
+            const f2 = whalesCount / 8.0;
+            const f3 = rsi / 100.0;
+
+            // Registrar punto actual en la memoria histórica k-NN
+            const currentTarget = avgNow >= 50 ? 1 : -1;
+            knnHistory.push({ f1, f2, f3, target: currentTarget });
+            if (knnHistory.length > KNN_WINDOW) knnHistory.shift();
+
+            if (knnHistory.length < 10) return { bullScore: 50.0, bearScore: 50.0 };
+
+            let sumBullWeight = 0.0;
+            let sumBearWeight = 0.0;
+
+            for (let i = 0; i < knnHistory.length - 1; i++) {
+                const hist = knnHistory[i];
+                const d1 = Math.pow(f1 - hist.f1, 2);
+                const d2 = Math.pow(f2 - hist.f2, 2);
+                const d3 = Math.pow(f3 - hist.f3, 2);
+                const dist = Math.sqrt(d1 + d2 + d3);
+
+                const weight = 1.0 / (dist + 0.0001);
+                if (hist.target === 1) sumBullWeight += weight;
+                else sumBearWeight += weight;
+            }
+
+            const totalW = sumBullWeight + sumBearWeight;
+            const bullScore = totalW > 0 ? (sumBullWeight / totalW) * 100.0 : 50.0;
+            const bearScore = 100.0 - bullScore;
+
+            return { bullScore, bearScore };
+        }
+
+        // --- 4. MOTOR PRINCIPAL DE ACTUALIZACIÓN ---
+        async function updateDashboard() {
+            try {
+                const [binance, bybit, coinbase, okx] = await Promise.all([
+                    fetchBinance().catch(() => ({ pctBuy: 50, isWhale: false, close: 0, high: 0, low: 0 })),
+                    fetchBybit().catch(() => ({ pctBuy: 50, isWhale: false, close: 0, high: 0, low: 0 })),
+                    fetchCoinbase().catch(() => ({ pctBuy: 50, isWhale: false, close: 0, high: 0, low: 0 })),
+                    fetchOKX().catch(() => ({ pctBuy: 50, isWhale: false, close: 0, high: 0, low: 0 }))
+                ]);
+
+                // Precio promedio y RSI
+                const prices = [binance.close, bybit.close, coinbase.close, okx.close].filter(p => p > 0);
+                const avgPrice = prices.reduce((a, b) => a + b, 0) / (prices.length || 1);
+                const rsi = updateRSI(avgPrice);
+
+                document.getElementById('btc-price').innerText = `$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                document.getElementById('rsi-val').innerText = rsi.toFixed(1);
+
+                // Cálculo Ponderado
+                const weighted1m = (binance.pctBuy * WEIGHTS.binance) + 
+                                  (bybit.pctBuy * WEIGHTS.bybit) + 
+                                  (coinbase.pctBuy * WEIGHTS.coinbase) + 
+                                  (okx.pctBuy * WEIGHTS.okx);
+
+                const whalesCount = (binance.isWhale?1:0) + (bybit.isWhale?1:0) + (coinbase.isWhale?1:0) + (okx.isWhale?1:0);
+
+                // Ejecutar Algoritmo IA
+                const { bullScore, bearScore } = runKNN(weighted1m, whalesCount, rsi);
+
+                document.getElementById('ai-bull').innerText = `${bullScore.toFixed(1)}%`;
+                document.getElementById('ai-bear').innerText = `${bearScore.toFixed(1)}%`;
+
+                // Renderizar Tabla
+                renderTable([binance, bybit, coinbase, okx], weighted1m, whalesCount, bullScore, bearScore);
+
+                // Renderizar Análisis Estructural
+                renderAnalysis(avgPrice, binance.high, binance.low, bullScore, bearScore, weighted1m);
+
+            } catch (err) {
+                console.error("Error al actualizar datos:", err);
+            }
+        }
+
+        // --- 5. RENDERIZADO VISUAL ---
+        function renderTable(data, weighted1m, whalesCount, bullScore, bearScore) {
+            const tbody = document.getElementById('dashboard-body');
+            const timeframes = ['1m', '5m', '15m', '1h', '4h', '1D', '1W', '1M'];
+            
+            let html = '';
+            
+            // Filas simuladas por TF (Usando datos en vivo para 1m)
+            timeframes.forEach((tf, idx) => {
+                html += `<tr><td class="cell-header">${tf}</td>`;
+                data.forEach(ex => {
+                    const pctB = ex.pctBuy;
+                    const pctS = 100 - pctB;
+                    const isWhale = ex.isWhale && idx === 0;
+                    const cellClass = pctB >= 50 ? 'cell-green' : 'cell-red';
+                    html += `<td class="${cellClass}">${pctB}% | ${pctS}%${isWhale ? ' 🐋' : ''}</td>`;
+                });
+                html += `</tr>`;
+            });
+
+            // Estado "AHORA MISMO"
+            let actionText = "⏳ Mercado en Espera";
+            let actionBg = "#334155";
+            if (whalesCount >= 2) {
+                actionText = "🐋 Ballenas Absorbiendo";
+                actionBg = "#8232ca";
+            } else if (weighted1m >= 60) {
+                actionText = "🚀 Comprando con Fuerza";
+                actionBg = "#10783c";
+            } else if (weighted1m <= 40) {
+                actionText = "💥 Vendiendo con Fuerza";
+                actionBg = "#b42832";
+            }
+
+            html += `
+                <tr>
+                    <td class="cell-header">AHORA</td>
+                    <td colspan="4" class="merged-row" style="background-color: ${actionBg}; color: white;">${actionText}</td>
+                </tr>
+            `;
+
+            // Predicción IA
+            let aiText = "🤖 IA: NEUTRAL";
+            let aiBg = "#334155";
+            if (bullScore >= MIN_CONFIDENCE) {
+                aiText = `🤖 IA: COMPRAR (${bullScore.toFixed(1)}%)`;
+                aiBg = "#10783c";
+            } else if (bearScore >= MIN_CONFIDENCE) {
+                aiText = `🤖 IA: VENDER (${bearScore.toFixed(1)}%)`;
+                aiBg = "#b42832";
+            }
+
+            html += `
+                <tr>
+                    <td class="cell-header">IA PRED.</td>
+                    <td colspan="4" class="merged-row" style="background-color: ${aiBg}; color: white;">${aiText}</td>
+                </tr>
+            `;
+
+            tbody.innerHTML = html;
+        }
+
+        function renderAnalysis(price, high, low, bullScore, bearScore, weighted1m) {
+            const atr = (high - low) || (price * 0.005); // Estimación del ATR
+            
+            const optAEntryMin = Math.max(low, price - (atr * 1.5));
+            const optAEntryMax = optAEntryMin + (atr * 0.5);
+            const optASl = optAEntryMin - (atr * 1.2);
+            const optATp1 = price + (atr * 1.5);
+            const optATp2 = high || (price + (atr * 3));
+
+            const optBEntry = high || (price + (atr * 1.0));
+            const optBSl = price - (atr * 1.0);
+            const optBTp1 = optBEntry + (atr * 2.5);
+
+            let bias = "NEUTRAL / EN RANGO";
+            if (bullScore >= MIN_CONFIDENCE) bias = `ALCISTA (IA ${bullScore.toFixed(1)}%)`;
+            else if (bearScore >= MIN_CONFIDENCE) bias = `BAJISTA (IA ${bearScore.toFixed(1)}%)`;
+
+            const text = `🤖 ANÁLISIS ESTRUCTURAL IA EN VIVO
+--------------------------------------------------
+📍 Sesgo Actual: ${bias}
+⚠️ ZONA NEUTRA: Evitar operar cerca de $${price.toFixed(2)}
+
+🔹 OPCIÓN A: Retroceso al Soporte (Mayor R/R)
+ • Entrada (Limit): $${optAEntryMin.toFixed(2)} - $${optAEntryMax.toFixed(2)}
+ • Stop Loss (SL): $${optASl.toFixed(2)}
+ • Take Profit: TP1 $${optATp1.toFixed(2)} | TP2 $${optATp2.toFixed(2)}
+
+🔹 OPCIÓN B: Ruptura / Confirmación
+ • Entrada: Cierre sobre $${optBEntry.toFixed(2)} con volumen
+ • Confirmación IA: Score > ${MIN_CONFIDENCE}%
+ • Stop Loss (SL): $${optBSl.toFixed(2)}
+ • Take Profit: $${optBTp1.toFixed(2)}
+
+💡 Resumen: ${weighted1m >= 55 ? "Presión compradora activa." : "Consolidación de precio."}`;
+
+            document.getElementById('analysis-box').innerText = text;
+        }
+
+        // Ejecución inicial y refresco cada 3 segundos
+        updateDashboard();
+        setInterval(updateDashboard, 3000);
+    </script>
+</body>
+</html>
