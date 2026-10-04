@@ -3,338 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Trading - Selector TF + Alertas Sonoras</title>
+    <title>TradingView Indicator - Top 4 Brokers + IA</title>
     <style>
         :root {
-            --bg-dark: #0f1218;
-            --card-bg: #1e222d;
-            --border-color: #282d37;
-            --text-main: #ffffff;
-            --text-muted: #808080;
-            --green: #10783c;
-            --red: #b42832;
-            --accent: #00ffff;
-            --purple: #8232ca;
+            --tv-bg: #131722;
+            --tv-card-bg: #1e222d;
+            --tv-border: #2a2e39;
+            --tv-text: #d1d4dc;
+            --tv-text-muted: #787b86;
+            --tv-green: #089981;
+            --tv-red: #f23645;
+            --tv-blue: #2962ff;
+            --tv-purple: #8e24aa;
+            --tv-yellow: #f5a623;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
+            background-color: var(--tv-bg);
+            color: var(--tv-text);
             margin: 0;
             padding: 20px;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-end; /* Alineado a la derecha como en TradingView */
+            gap: 15px;
         }
 
-        .container {
-            width: 100%;
-            max-width: 1150px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 900px) {
-            .container { grid-template-columns: 1fr; }
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        }
-
-        h2 {
-            margin-top: 0;
-            font-size: 1.1rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-            color: #f0f0f0;
-        }
-
-        .controls-bar {
-            grid-column: 1 / -1;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            padding: 12px 20px;
-            border-radius: 8px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .selector-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        select {
-            background-color: #282d35;
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            font-weight: bold;
-            cursor: pointer;
-            outline: none;
-        }
-
-        select:focus {
-            border-color: var(--accent);
-        }
-
-        .btn-audio {
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 0.85rem;
-            transition: background 0.2s;
-        }
-
-        .btn-audio.active {
-            background-color: var(--green);
-        }
-
-        table {
-            width: 100%;
+        /* --- DASHBOARD SUPERIOR DERECHO --- */
+        .dash-table {
+            background-color: #0f1218;
+            border: 1px solid #282d37;
             border-collapse: collapse;
-            font-size: 0.85rem;
+            font-size: 11px;
+            width: 320px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .dash-table th, .dash-table td {
+            padding: 4px 6px;
+            border: 1px solid #282d37;
             text-align: center;
+            white-space: nowrap;
         }
 
-        th, td {
-            padding: 10px 6px;
-            border: 1px solid var(--border-color);
+        .dash-table th {
+            background-color: #282d37;
+            color: #ffffff;
+            font-weight: 600;
         }
 
-        th {
-            background-color: #282d35;
-            color: var(--text-muted);
-        }
-
-        .cell-green { background-color: var(--green); color: white; font-weight: bold; }
-        .cell-red { background-color: var(--red); color: white; font-weight: bold; }
-        .cell-header { background-color: #1e222d; color: var(--text-muted); font-weight: bold; }
-
-        .merged-row {
+        .dash-table td.tf-col {
+            background-color: #1e222d;
+            color: #808080;
             font-weight: bold;
-            text-align: center;
         }
 
-        .ai-metrics {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-        }
+        .cell-green { background-color: rgb(16, 120, 60); color: #ffffff; font-weight: 500; }
+        .cell-red { background-color: rgb(180, 40, 50); color: #ffffff; font-weight: 500; }
 
-        .metric-box {
-            background: #141720;
-            border: 1px solid var(--border-color);
+        .row-now { background-color: #10783c; color: #ffffff; font-weight: bold; }
+        .row-news { background-color: #50505a; color: #ffffff; font-weight: bold; }
+        .row-ai { background-color: #323741; color: #ffffff; font-weight: bold; }
+
+        /* --- RECUADRO DE ANÁLISIS ESTRUCTURAL IA --- */
+        .ia-box {
+            background-color: rgba(20, 24, 35, 0.95);
+            border: 1px solid var(--tv-border);
             border-radius: 6px;
-            padding: 12px;
-            text-align: center;
+            padding: 12px 15px;
+            width: 480px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #ffffff;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
         }
 
-        .metric-box .title {
-            font-size: 0.75rem;
-            color: var(--text-muted);
+        .ia-box .header {
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
             margin-bottom: 4px;
         }
 
-        .metric-box .value {
-            font-size: 1.2rem;
-            font-weight: bold;
+        .ia-box .divider {
+            color: #434651;
+            margin-bottom: 8px;
         }
 
-        .analysis-text {
-            background-color: #141720;
-            border: 1px solid var(--border-color);
-            border-left: 4px solid #3b82f6;
-            border-radius: 4px;
-            padding: 15px;
-            font-family: monospace;
-            font-size: 0.82rem;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            color: #e2e8f0;
+        .ia-box .section-title {
+            color: #2962ff;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .ia-box .bullet {
+            padding-left: 10px;
+            color: #d1d4dc;
+        }
+
+        .status-header {
+            align-self: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: var(--tv-text-muted);
         }
     </style>
 </head>
 <body>
 
-    <h1 style="margin-bottom: 5px; font-size: 1.6rem;">Dashboard Con Selector de Timeframe + Alertas</h1>
-    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Selecciona la temporalidad deseada para actualizar en tiempo real el análisis de volumen y la IA</p>
+    <div class="status-header">
+        BTC/USDT Promedio: <strong id="live-price" style="color: #ffffff;">$85,180.04</strong> | 
+        Estado APIs: <span id="api-status" style="color: var(--tv-green);">● En Vivo</span>
+    </div>
 
-    <div class="container">
-        <!-- BARRA DE CONTROL PRINCIPAL -->
-        <div class="controls-bar">
-            <div class="selector-group">
-                <label for="tf-select" style="font-weight: bold; color: var(--accent);">Timeframe:</label>
-                <select id="tf-select" onchange="onTimeframeChange()">
-                    <option value="1m">1 Minuto (1m)</option>
-                    <option value="5m">5 Minutos (5m)</option>
-                    <option value="15m" selected>15 Minutos (15m)</option>
-                    <option value="1h">1 Hora (1h)</option>
-                    <option value="4h">4 Horas (4h)</option>
-                    <option value="1D">1 Día (1D)</option>
-                    <option value="1W">1 Semana (1W)</option>
-                    <option value="1M">1 Mes (1M)</option>
-                </select>
-            </div>
+    <!-- 1. DASHBOARD PRINCIPAL DE 4 BROKERS -->
+    <table class="dash-table">
+        <thead>
+            <tr>
+                <th style="color: #808080;">TF</th>
+                <th>Binance</th>
+                <th>Bybit</th>
+                <th>Coinbase</th>
+                <th>OKX</th>
+            </tr>
+        </thead>
+        <tbody id="dash-rows">
+            <!-- Filas de temporalidades generadas dinámicamente -->
+        </tbody>
+    </table>
 
-            <div>
-                <span>BTC Promedio: <strong id="btc-price" style="color: var(--accent);">$0.00</strong></span> | 
-                <span>RSI: <strong id="rsi-val">0.0</strong></span>
-            </div>
-
-            <button id="audio-btn" class="btn-audio" onclick="toggleAudio()">🔔 Activar Sonido Alertas</button>
-        </div>
-
-        <!-- TABLA DE BROKERS -->
-        <div class="card">
-            <h2>📊 Flujo de Volumen (<span id="selected-tf-label">15m</span>)</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Broker</th>
-                        <th>Compradores %</th>
-                        <th>Vendedores %</th>
-                        <th>Anomalía / Ballena</th>
-                    </tr>
-                </thead>
-                <tbody id="dashboard-body">
-                    <!-- Datos generados por JS -->
-                </tbody>
-            </table>
-        </div>
-
-        <!-- MÓDULO IA Y ESTRATEGIA -->
-        <div class="card">
-            <h2>🤖 Pronóstico IA k-NN (<span id="selected-tf-label-ai">15m</span>)</h2>
-            
-            <div class="ai-metrics">
-                <div class="metric-box">
-                    <div class="title">Score IA Alcista</div>
-                    <div class="value" id="ai-bull" style="color: #4ade80;">50.0%</div>
-                </div>
-                <div class="metric-box">
-                    <div class="title">Score IA Bajista</div>
-                    <div class="value" id="ai-bear" style="color: #f87171;">50.0%</div>
-                </div>
-            </div>
-
-            <div class="analysis-text" id="analysis-box">Cargando datos del timeframe seleccionado...</div>
-        </div>
+    <!-- 2. RECUADRO DE ANÁLISIS ESTRUCTURAL IA -->
+    <div class="ia-box" id="ia-analysis-box">
+        <div class="header">🤖 ANÁLISIS ESTRUCTURAL IA (<span id="current-tf-label">60</span>)</div>
+        <div class="divider">--------------------------------------------------</div>
+        <div id="ia-content">Cargando datos y sincronizando con brokers...</div>
     </div>
 
     <script>
-        const TIMEFRAME_MAP = {
-            '1m':  { binance: '1m',  bybit: '1',   coinbase: '60',    okx: '1m' },
-            '5m':  { binance: '5m',  bybit: '5',   coinbase: '300',   okx: '5m' },
-            '15m': { binance: '15m', bybit: '15',  coinbase: '900',   okx: '15m' },
-            '1h':  { binance: '1h',  bybit: '60',  coinbase: '3600',  okx: '1H' },
-            '4h':  { binance: '4h',  bybit: '240', coinbase: '14400', okx: '4H' },
-            '1D':  { binance: '1d',  bybit: 'D',   coinbase: '86400', okx: '1D' },
-            '1W':  { binance: '1w',  bybit: 'W',   coinbase: '86400', okx: '1W' },
-            '1M':  { binance: '1M',  bybit: 'M',   coinbase: '86400', okx: '1M' }
-        };
+        const TIMEFRAMES = [
+            { label: '1m',  binance: '1m',  bybit: '1',   coinbase: '60',    okx: '1m' },
+            { label: '5m',  binance: '5m',  bybit: '5',   coinbase: '300',   okx: '5m' },
+            { label: '15m', binance: '15m', bybit: '15',  coinbase: '900',   okx: '15m' },
+            { label: '1h',  binance: '1h',  bybit: '60',  coinbase: '3600',  okx: '1H' },
+            { label: '4h',  binance: '4h',  bybit: '240', coinbase: '14400', okx: '4H' },
+            { label: '1D',  binance: '1d',  bybit: 'D',   coinbase: '86400', okx: '1D' },
+            { label: '1W',  binance: '1w',  bybit: 'W',   coinbase: '86400', okx: '1W' },
+            { label: '1M',  binance: '1M',  bybit: 'M',   coinbase: '86400', okx: '1M' }
+        ];
 
         const WEIGHTS = { binance: 0.30, bybit: 0.30, coinbase: 0.20, okx: 0.20 };
-        const MIN_CONFIDENCE = 65.0;
-
-        let currentTF = '15m';
         let knnHistory = [];
-        let currentRsi = 50.0;
-        let lastPrice = 0;
-        let audioEnabled = false;
-        let audioCtx = null;
-        let lastAlertTime = 0;
-
-        function toggleAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            audioEnabled = !audioEnabled;
-            const btn = document.getElementById('audio-btn');
-            
-            if (audioEnabled) {
-                btn.innerText = "🔊 Alertas Activas";
-                btn.classList.add('active');
-                playTone(600, 0.1); // Sonido de confirmación
-            } else {
-                btn.innerText = "🔔 Activar Sonido Alertas";
-                btn.classList.remove('active');
-            }
-        }
-
-        function playTone(freq, duration) {
-            if (!audioEnabled || !audioCtx) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + duration);
-            } catch (e) {}
-        }
-
-        function triggerAlertSound(isBullish) {
-            const now = Date.now();
-            if (now - lastAlertTime < 30000) return; // Evitar sonido continuo (máximo 1 vez cada 30s)
-            lastAlertTime = now;
-
-            if (isBullish) {
-                playTone(523.25, 0.15); // C5
-                setTimeout(() => playTone(659.25, 0.15), 150); // E5
-                setTimeout(() => playTone(783.99, 0.3), 300); // G5
-            } else {
-                playTone(783.99, 0.15);
-                setTimeout(() => playTone(659.25, 0.15), 150);
-                setTimeout(() => playTone(523.25, 0.3), 300);
-            }
-        }
 
         function parseKlines(klines) {
             if (!klines || klines.length === 0) return { pctBuy: 50, isWhale: false, close: 0, high: 0, low: 0 };
             
-            let totalVol = 0;
-            let sumBuyVol = 0;
-            let volumes = [];
-
+            let totalVol = 0, sumBuyVol = 0, volumes = [];
             klines.forEach(k => {
-                const high = parseFloat(k[2]);
-                const low = parseFloat(k[3]);
-                const close = parseFloat(k[4]);
-                const vol = parseFloat(k[5]);
-                
+                const high = parseFloat(k[2]), low = parseFloat(k[3]), close = parseFloat(k[4]), vol = parseFloat(k[5]);
                 const range = high - low;
                 const buyVol = range > 0 ? vol * ((close - low) / range) : vol * 0.5;
-                
-                totalVol += vol;
-                sumBuyVol += buyVol;
-                volumes.push(vol);
+                totalVol += vol; sumBuyVol += buyVol; volumes.push(vol);
             });
 
             const lastCandle = klines[0];
-            const close = parseFloat(lastCandle[4]);
-            const high = parseFloat(lastCandle[2]);
-            const low = parseFloat(lastCandle[3]);
-
+            const close = parseFloat(lastCandle[4]), high = parseFloat(lastCandle[2]), low = parseFloat(lastCandle[3]);
             const pctBuy = totalVol > 0 ? Math.round((sumBuyVol / totalVol) * 100) : 50;
             const avgVol = volumes.reduce((a, b) => a + b, 0) / volumes.length;
             const isWhale = volumes[0] > (avgVol * 2.0);
@@ -342,31 +181,19 @@
             return { pctBuy, isWhale, close, high, low };
         }
 
-        async function fetchExchangeData(tfKey) {
-            const params = TIMEFRAME_MAP[tfKey];
-
-            const [binance, bybit, coinbase, okx] = await Promise.all([
-                fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${params.binance}&limit=20`)
-                    .then(r => r.json()).then(d => parseKlines(d)).catch(() => ({ pctBuy: 50, isWhale: false, close: 0 })),
-
-                fetch(`https://api.bybit.com/v5/market/kline?category=spot&symbol=BTCUSDT&interval=${params.bybit}&limit=20`)
-                    .then(r => r.json()).then(d => parseKlines(d.result.list.map(x => [x[0], x[1], x[2], x[3], x[4], x[5]]))).catch(() => ({ pctBuy: 50, isWhale: false, close: 0 })),
-
-                fetch(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=${params.coinbase}`)
-                    .then(r => r.json()).then(d => parseKlines(d.slice(0, 20).map(x => [x[0]*1000, x[3], x[2], x[1], x[4], x[5]]))).catch(() => ({ pctBuy: 50, isWhale: false, close: 0 })),
-
-                fetch(`https://www.okx.com/api/v5/market/candles?instId=BTC-USDT&bar=${params.okx}&limit=20`)
-                    .then(r => r.json()).then(d => parseKlines(d.data.map(x => [x[0], x[1], x[2], x[3], x[4], x[5]]))).catch(() => ({ pctBuy: 50, isWhale: false, close: 0 }))
+        async function fetchTFRow(tfObj) {
+            const [b1, b2, b3, b4] = await Promise.all([
+                fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${tfObj.binance}&limit=20`).then(r => r.json()).then(parseKlines).catch(() => ({pctBuy: 50, isWhale: false, close: 0})),
+                fetch(`https://api.bybit.com/v5/market/kline?category=spot&symbol=BTCUSDT&interval=${tfObj.bybit}&limit=20`).then(r => r.json()).then(d => parseKlines(d.result.list.map(x => [x[0], x[1], x[2], x[3], x[4], x[5]]))).catch(() => ({pctBuy: 50, isWhale: false, close: 0})),
+                fetch(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=${tfObj.coinbase}`).then(r => r.json()).then(d => parseKlines(d.slice(0, 20).map(x => [x[0]*1000, x[3], x[2], x[1], x[4], x[5]]))).catch(() => ({pctBuy: 50, isWhale: false, close: 0})),
+                fetch(`https://www.okx.com/api/v5/market/candles?instId=BTC-USDT&bar=${tfObj.okx}&limit=20`).then(r => r.json()).then(d => parseKlines(d.data.map(x => [x[0], x[1], x[2], x[3], x[4], x[5]]))).catch(() => ({pctBuy: 50, isWhale: false, close: 0}))
             ]);
 
-            return { binance, bybit, coinbase, okx };
+            return { tf: tfObj.label, b1, b2, b3, b4 };
         }
 
-        function runKNN(avgNow, whalesCount, rsi) {
-            const f1 = avgNow / 100.0;
-            const f2 = whalesCount / 4.0;
-            const f3 = rsi / 100.0;
-
+        function calculateKNN(avgNow, whalesCount) {
+            const f1 = avgNow / 100.0, f2 = whalesCount / 8.0, f3 = 0.5;
             const target = avgNow >= 50 ? 1 : -1;
             knnHistory.push({ f1, f2, f3, target });
             if (knnHistory.length > 100) knnHistory.shift();
@@ -380,157 +207,137 @@
                 const w = 1.0 / (dist + 0.0001);
                 if (h.target === 1) sumBull += w; else sumBear += w;
             }
-
             const total = sumBull + sumBear;
             const bullScore = total > 0 ? (sumBull / total) * 100 : 50;
             return { bullScore, bearScore: 100 - bullScore };
         }
 
-        function updateRSI(newPrice) {
-            if (lastPrice === 0) { lastPrice = newPrice; return 50; }
-            let change = newPrice - lastPrice;
-            let gain = change > 0 ? change : 0;
-            let loss = change < 0 ? -change : 0;
-            currentRsi = (currentRsi * 13 + (gain / (gain + loss || 1)) * 100) / 14;
-            lastPrice = newPrice;
-            return Math.min(Math.max(currentRsi, 10), 90);
+        async function updateFullDashboard() {
+            try {
+                const rows = await Promise.all(TIMEFRAMES.map(fetchTFRow));
+
+                // Precio de referencia en vivo
+                const validPrices = [rows[0].b1.close, rows[0].b2.close, rows[0].b3.close, rows[0].b4.close].filter(p => p > 0);
+                const avgPrice = validPrices.reduce((a, b) => a + b, 0) / (validPrices.length || 1);
+                document.getElementById('live-price').innerText = `$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+                // Ponderaciones (1m + 5m)
+                const row1m = rows[0], row5m = rows[1];
+                const w1m = (row1m.b1.pctBuy*0.3) + (row1m.b2.pctBuy*0.3) + (row1m.b3.pctBuy*0.2) + (row1m.b4.pctBuy*0.2);
+                const w5m = (row5m.b1.pctBuy*0.3) + (row5m.b2.pctBuy*0.3) + (row5m.b3.pctBuy*0.2) + (row5m.b4.pctBuy*0.2);
+                const avgNow = (w1m + w5m) / 2.0;
+
+                const shortWhales = (row1m.b1.isWhale?1:0) + (row1m.b2.isWhale?1:0) + (row1m.b3.isWhale?1:0) + (row1m.b4.isWhale?1:0) +
+                                    (row5m.b1.isWhale?1:0) + (row5m.b2.isWhale?1:0) + (row5m.b3.isWhale?1:0) + (row5m.b4.isWhale?1:0);
+
+                const { bullScore } = calculateKNN(avgNow, shortWhales);
+
+                // Renderizar Tabla
+                renderDashboardRows(rows, avgNow, shortWhales, bullScore);
+
+                // Renderizar Análisis Estructural IA
+                renderIAAnalysis(avgPrice, row1m.b1.high, row1m.b1.low, bullScore, avgNow);
+
+            } catch (e) {
+                console.error("Error al actualizar datos:", e);
+            }
         }
 
-        async function updateDashboard() {
-            const data = await fetchExchangeData(currentTF);
-
-            const prices = [data.binance.close, data.bybit.close, data.coinbase.close, data.okx.close].filter(p => p > 0);
-            const avgPrice = prices.reduce((a, b) => a + b, 0) / (prices.length || 1);
-            const rsi = updateRSI(avgPrice);
-
-            document.getElementById('btc-price').innerText = `$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            document.getElementById('rsi-val').innerText = rsi.toFixed(1);
-
-            const weightedBuy = (data.binance.pctBuy * WEIGHTS.binance) + 
-                                (data.bybit.pctBuy * WEIGHTS.bybit) + 
-                                (data.coinbase.pctBuy * WEIGHTS.coinbase) + 
-                                (data.okx.pctBuy * WEIGHTS.okx);
-
-            const whaleCount = (data.binance.isWhale?1:0) + (data.bybit.isWhale?1:0) + (data.coinbase.isWhale?1:0) + (data.okx.isWhale?1:0);
-
-            const { bullScore, bearScore } = runKNN(weightedBuy, whaleCount, rsi);
-
-            document.getElementById('ai-bull').innerText = `${bullScore.toFixed(1)}%`;
-            document.getElementById('ai-bear').innerText = `${bearScore.toFixed(1)}%`;
-
-            // Reproducir sonido si supera la confianza
-            if (bullScore >= MIN_CONFIDENCE) triggerAlertSound(true);
-            else if (bearScore >= MIN_CONFIDENCE) triggerAlertSound(false);
-
-            renderTable(data, weightedBuy, whaleCount, bullScore, bearScore);
-            renderAnalysis(avgPrice, data.binance.high, data.binance.low, bullScore, bearScore, weightedBuy);
-        }
-
-        function renderTable(data, weightedBuy, whaleCount, bullScore, bearScore) {
-            const exchanges = [
-                { name: 'Binance (30%)', data: data.binance },
-                { name: 'Bybit (30%)', data: data.bybit },
-                { name: 'Coinbase (20%)', data: data.coinbase },
-                { name: 'OKX (20%)', data: data.okx }
-            ];
-
+        function renderDashboardRows(rows, avgNow, shortWhales, bullScore) {
+            const tbody = document.getElementById('dash-rows');
             let html = '';
-            exchanges.forEach(ex => {
-                const buy = ex.data.pctBuy;
-                const sell = 100 - buy;
-                const cellClass = buy >= 50 ? 'cell-green' : 'cell-red';
 
-                html += `
-                    <tr>
-                        <td class="cell-header">${ex.name}</td>
-                        <td class="${cellClass}">${buy}%</td>
-                        <td class="${cellClass}">${sell}%</td>
-                        <td>${ex.data.isWhale ? '🐋 Ballena Detectada' : 'Normal'}</td>
-                    </tr>
-                `;
+            rows.forEach(r => {
+                const brokers = [r.b1, r.b2, r.b3, r.b4];
+                html += `<tr><td class="tf-col">${r.tf}</td>`;
+                brokers.forEach(b => {
+                    const pctB = b.pctBuy;
+                    const pctS = 100 - pctB;
+                    const cls = pctB >= 50 ? 'cell-green' : 'cell-red';
+                    html += `<td class="${cls}">${pctB}% | ${pctS}%${b.isWhale ? ' 🐋' : ''}</td>`;
+                });
+                html += `</tr>`;
             });
 
-            // Resumen de la temporalidad seleccionada
-            let actionText = "⏳ Consolidación / Rango";
-            let actionBg = "#334155";
-            if (whaleCount >= 2) {
-                actionText = "🐋 Absorción Importante de Ballenas";
-                actionBg = "#8232ca";
-            } else if (weightedBuy >= 58) {
-                actionText = "🚀 Dominio Comprador Claro";
-                actionBg = "#10783c";
-            } else if (weightedBuy <= 42) {
-                actionText = "💥 Presión Vendedora Dominante";
-                actionBg = "#b42832";
-            }
+            // Fila AHORA MISMO
+            let actText = "⏳ Mercado en Espera", actBg = "rgb(70, 75, 85)";
+            if (shortWhales >= 2) { actText = "🐋 Ballenas Absorbiendo"; actBg = "rgb(130, 50, 200)"; }
+            else if (avgNow >= 60) { actText = "🚀 Comprando con Fuerza"; actBg = "rgb(16, 120, 60)"; }
+            else if (avgNow <= 40) { actText = "💥 Vendiendo con Fuerza"; actBg = "rgb(180, 40, 50)"; }
 
             html += `
                 <tr>
-                    <td class="cell-header">ESTADO (${currentTF})</td>
-                    <td colspan="3" class="merged-row" style="background-color: ${actionBg}; color: white;">${actionText}</td>
+                    <td class="tf-col" style="color: #00ffff;">AHORA MISMO</td>
+                    <td colspan="4" style="background-color: ${actBg}; color: #ffffff; font-weight: bold;">${actText}</td>
                 </tr>
             `;
 
-            let aiText = "🤖 IA: NEUTRAL";
-            let aiBg = "#334155";
-            if (bullScore >= MIN_CONFIDENCE) {
-                aiText = `🤖 IA: SEÑAL ALCISTA (${bullScore.toFixed(1)}%)`;
-                aiBg = "#10783c";
-            } else if (bearScore >= MIN_CONFIDENCE) {
-                aiText = `🤖 IA: SEÑAL BAJISTA (${bearScore.toFixed(1)}%)`;
-                aiBg = "#b42832";
-            }
+            // Fila SESGO NOTICIA
+            html += `
+                <tr>
+                    <td class="tf-col" style="color: #ffff00;">SESGO NOTICIA</td>
+                    <td colspan="4" class="row-news">⚖️ NEUTRAL</td>
+                </tr>
+            `;
+
+            // Fila PREDICCIÓN IA
+            let aiText = `🤖 IA: NEUTRAL / BULL (${bullScore.toFixed(1)}%)`;
+            let aiBg = "rgb(50, 55, 65)";
+            if (bullScore >= 65) { aiText = `🤖 IA: COMPRAR (${bullScore.toFixed(1)}%)`; aiBg = "rgb(16, 120, 60)"; }
+            else if (bullScore <= 35) { aiText = `🤖 IA: VENDER (${(100 - bullScore).toFixed(1)}%)`; aiBg = "rgb(180, 40, 50)"; }
 
             html += `
                 <tr>
-                    <td class="cell-header">SEÑAL IA</td>
-                    <td colspan="3" class="merged-row" style="background-color: ${aiBg}; color: white;">${aiText}</td>
+                    <td class="tf-col" style="color: #ff00ff;">PREDICCIÓN IA</td>
+                    <td colspan="4" style="background-color: ${aiBg}; color: #ffffff; font-weight: bold;">${aiText}</td>
                 </tr>
             `;
 
-            document.getElementById('dashboard-body').innerHTML = html;
+            tbody.innerHTML = html;
         }
 
-        function renderAnalysis(price, high, low, bullScore, bearScore, weightedBuy) {
+        function renderIAAnalysis(price, high, low, bullScore, avgNow) {
             const atr = (high - low) || (price * 0.005);
             
-            const entryMin = Math.max(low, price - (atr * 1.2));
-            const entryMax = entryMin + (atr * 0.4);
-            const sl = entryMin - (atr * 1.0);
+            const entryMin = Math.max(low, price - (atr * 1.5));
+            const entryMax = entryMin + (atr * 0.5);
+            const sl = entryMin - (atr * 1.2);
             const tp1 = price + (atr * 1.5);
-            const tp2 = high || (price + (atr * 2.5));
+            const tp2 = high || (price + (atr * 3.0));
 
-            let bias = "NEUTRAL";
-            if (bullScore >= MIN_CONFIDENCE) bias = `ALCISTA (${bullScore.toFixed(1)}%)`;
-            else if (bearScore >= MIN_CONFIDENCE) bias = `BAJISTA (${bearScore.toFixed(1)}%)`;
+            const optBEntry = high || (price + (atr * 1.0));
+            const optBSl = price - (atr * 1.0);
+            const optBTp1 = optBEntry + (atr * 2.5);
 
-            const text = `🎯 ANÁLISIS ESTRUCTURAL [TF: ${currentTF}]
---------------------------------------------------
-📍 Sesgo Principal: ${bias}
-💵 Precio BTC: $${price.toFixed(2)}
+            let bias = "NEUTRAL / EN RANGO";
+            if (bullScore >= 65) bias = `ALCISTA (IA ${bullScore.toFixed(1)}%)`;
+            else if (bullScore <= 35) bias = `BAJISTA (IA ${(100 - bullScore).toFixed(1)}%)`;
 
-🔹 Configuración de Entrada Recomendada:
- • Zona de Entrada: $${entryMin.toFixed(2)} - $${entryMax.toFixed(2)}
- • Stop Loss (SL): $${sl.toFixed(2)}
- • Objetivo 1 (TP1): $${tp1.toFixed(2)}
- • Objetivo 2 (TP2): $${tp2.toFixed(2)}
+            const html = `
+                <div>📍 <strong>Sesgo Actual:</strong> ${bias}</div>
+                <div style="color: #f5a623;">⚠️ ZONA NEUTRA: Evitar operar cerca de $${Math.round(price)}</div>
+                
+                <div class="section-title">🔹 OPCIÓN A: Retroceso al Soporte (Mayor R/R)</div>
+                <div class="bullet">• Entrada (Limit): $${entryMin.toFixed(1)} - $${entryMax.toFixed(1)}</div>
+                <div class="bullet">• Stop Loss (SL): $${sl.toFixed(1)}</div>
+                <div class="bullet">• Take Profit: TP1 $${Math.round(tp1)} | TP2 $${Math.round(tp2)}</div>
 
-💡 Fuerza Compradora Global: ${weightedBuy.toFixed(1)}%`;
+                <div class="section-title">🔹 OPCIÓN B: Ruptura / Confirmación</div>
+                <div class="bullet">• Entrada: Cierre sobre $${optBEntry.toFixed(1)} con volumen</div>
+                <div class="bullet">• Confirmación IA: Score > 65% + Señal BUY</div>
+                <div class="bullet">• Stop Loss (SL): $${optBSl.toFixed(1)}</div>
+                <div class="bullet">• Take Profit: $${optBTp1.toFixed(1)}</div>
 
-            document.getElementById('analysis-box').innerText = text;
+                <br/>
+                <div>💡 <strong>Resumen:</strong> ${avgNow >= 55 ? "Presión compradora en Dashboard." : "Mercado en consolidación."} Buscar entradas en $${entryMin.toFixed(1)} o ruptura de $${optBEntry.toFixed(1)}.</div>
+            `;
+
+            document.getElementById('ia-content').innerHTML = html;
         }
 
-        function onTimeframeChange() {
-            currentTF = document.getElementById('tf-select').value;
-            document.getElementById('selected-tf-label').innerText = currentTF;
-            document.getElementById('selected-tf-label-ai').innerText = currentTF;
-            knnHistory = []; // Reiniciar la ventana k-NN para la nueva temporalidad
-            updateDashboard();
-        }
-
-        // Bucle de refresco continuo cada 5 segundos
-        updateDashboard();
-        setInterval(updateDashboard, 5000);
+        // Bucle continuo de actualización cada 5 segundos
+        updateFullDashboard();
+        setInterval(updateFullDashboard, 5000);
     </script>
 </body>
 </html>
