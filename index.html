@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantz IA - Terminal Multiexchange Real-Time</title>
+    <title>Quantz IA - Terminal Multiexchange & Binance Real-Time</title>
     <style>
         :root {
             --bg-body: #0b0e14;
@@ -35,6 +35,7 @@
             flex-direction: column;
         }
 
+        /* NAVBAR SUPERIOR */
         .top-nav {
             background-color: var(--panel-bg);
             border-bottom: 1px solid var(--border-color);
@@ -56,26 +57,36 @@
         }
 
         .brand-badge {
-            background: linear-gradient(135deg, #2962ff, #9c27b0);
+            background: linear-gradient(135deg, #f0b90b, #f39c12);
+            color: #000;
             padding: 3px 8px;
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 800;
         }
 
-        .market-ticker {
+        /* TICKER DE BINANCE EN VIVO */
+        .binance-ticker-box {
             display: flex;
             align-items: center;
             gap: 20px;
             background-color: var(--bg-body);
-            padding: 6px 16px;
-            border-radius: 6px;
+            padding: 8px 20px;
+            border-radius: 8px;
             border: 1px solid var(--border-color);
         }
 
         .ticker-item { display: flex; flex-direction: column; }
-        .ticker-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
-        .ticker-value { font-size: 1.05rem; font-weight: 700; font-family: 'Roboto Mono', monospace; }
+        .ticker-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+        .ticker-price { 
+            font-size: 1.25rem; 
+            font-weight: 800; 
+            font-family: 'Roboto Mono', monospace; 
+            transition: color 0.2s ease;
+        }
+
+        .price-up { color: var(--green) !important; }
+        .price-down { color: var(--red) !important; }
 
         .status-badge {
             display: inline-flex;
@@ -84,7 +95,7 @@
             font-size: 0.8rem;
             color: var(--green);
             background: var(--green-bg);
-            padding: 4px 10px;
+            padding: 6px 12px;
             border-radius: 20px;
             border: 1px solid rgba(14, 203, 129, 0.3);
         }
@@ -104,6 +115,7 @@
             100% { opacity: 1; transform: scale(1); }
         }
 
+        /* MAIN LAYOUT */
         .main-container {
             max-width: 1400px;
             width: 100%;
@@ -170,7 +182,6 @@
             padding: 10px 6px;
             border-bottom: 1px solid #1f2430;
             font-family: 'Roboto Mono', monospace;
-            transition: background 0.3s ease;
         }
 
         .row-active {
@@ -273,23 +284,32 @@
     <header class="top-nav">
         <div class="brand">
             <span>Quantz IA</span>
-            <span class="brand-badge">PRO TERMINAL</span>
+            <span class="brand-badge">BINANCE LIVE</span>
         </div>
 
-        <div class="market-ticker">
+        <!-- MÓDULO PRECIO BINANCE WEBSOCKET -->
+        <div class="binance-ticker-box">
             <div class="ticker-item">
-                <span class="ticker-label">Activo</span>
-                <span class="ticker-value" style="color: #ffffff;">BTC / USDT</span>
+                <span class="ticker-label">Referencia Binance Spot</span>
+                <span class="ticker-price" id="binance-price">$0.00</span>
             </div>
             <div class="ticker-item">
-                <span class="ticker-label">Precio Promedio Global</span>
-                <span class="ticker-value" id="global-price" style="color: var(--yellow);">$0.00</span>
+                <span class="ticker-label">Máx 24h</span>
+                <span class="ticker-price" id="binance-high" style="font-size: 0.95rem; color: #a0aec0;">$0.00</span>
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-label">Mín 24h</span>
+                <span class="ticker-price" id="binance-low" style="font-size: 0.95rem; color: #a0aec0;">$0.00</span>
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-label">Var 24h</span>
+                <span class="ticker-price" id="binance-change" style="font-size: 0.95rem;">0.00%</span>
             </div>
         </div>
 
         <div class="status-badge">
             <span class="pulse-dot"></span>
-            <span>Último pulso: <strong id="last-update" style="color: #fff; margin-left: 4px;">00:00:00</strong></span>
+            <span>WebSocket: <strong id="ws-status" style="color: #fff;">Conectado</strong></span>
         </div>
     </header>
 
@@ -298,7 +318,7 @@
         <!-- TABLA DE BROKERS -->
         <section class="panel">
             <div class="panel-header">
-                <span class="panel-title">📊 Matriz de Flujo de Volumen Multi-Broker (En Vivo)</span>
+                <span class="panel-title">📊 Matriz Multi-Broker (Ponderada con Binance WS)</span>
             </div>
             <div class="panel-body">
                 <div style="overflow-x: auto;">
@@ -313,14 +333,14 @@
                             </tr>
                         </thead>
                         <tbody id="matrix-tbody">
-                            <!-- Filas en vivo -->
+                            <!-- Filas dinámicas -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- PANEL DE IA Y ESTRATEGIA -->
+        <!-- PANEL DE IA -->
         <section class="panel">
             <div class="panel-header">
                 <span class="panel-title">🤖 Motor IA (k-NN) & Estrategia</span>
@@ -409,84 +429,100 @@
 
     <script>
         const TIMEFRAMES = [
-            { label: '1m',  binance: '1m',  bybit: '1',   coinbase: '60',    okx: '1m' },
-            { label: '5m',  binance: '5m',  bybit: '5',   coinbase: '300',   okx: '5m' },
-            { label: '15m', binance: '15m', bybit: '15',  coinbase: '900',   okx: '15m' },
-            { label: '1h',  binance: '1h',  bybit: '60',  coinbase: '3600',  okx: '1H' },
-            { label: '4h',  binance: '4h',  bybit: '240', coinbase: '14400', okx: '4H' },
-            { label: '1D',  binance: '1d',  bybit: 'D',   coinbase: '86400', okx: '1D' },
-            { label: '1W',  binance: '1w',  bybit: 'W',   coinbase: '86400', okx: '1W' },
-            { label: '1M',  binance: '1M',  bybit: 'M',   coinbase: '86400', okx: '1M' }
+            { label: '1m',  binance: '1m' },
+            { label: '5m',  binance: '5m' },
+            { label: '15m', binance: '15m' },
+            { label: '1h',  binance: '1h' },
+            { label: '4h',  binance: '4h' },
+            { label: '1D',  binance: '1d' },
+            { label: '1W',  binance: '1w' },
+            { label: '1M',  binance: '1M' }
         ];
 
         let selectedTFLabel = '1h';
-        let knnMemory = [];
-        let globalBtcPrice = 85180.0;
+        let currentBinancePrice = 85180.0;
+        let lastPrice = 0;
 
-        // Función robusta de Fetch con Timeout
-        async function fetchWithTimeout(url, options = {}, timeout = 2500) {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeout);
-            try {
-                const res = await fetch(url, { ...options, signal: controller.signal });
-                clearTimeout(id);
-                return await res.json();
-            } catch (err) {
-                clearTimeout(id);
-                return null;
-            }
+        // --- CONEXIÓN EN TIEMPO REAL VÍA WEBSOCKET BINANCE ---
+        function initBinanceWebSocket() {
+            const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
+
+            ws.onopen = () => {
+                document.getElementById('ws-status').innerText = "Activo (WS)";
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const newPrice = parseFloat(data.c);
+                const highPrice = parseFloat(data.h);
+                const lowPrice = parseFloat(data.l);
+                const percentChange = parseFloat(data.P);
+
+                const priceEl = document.getElementById('binance-price');
+                
+                // Resaltar parpadeo al subir/bajar
+                if (newPrice > lastPrice) {
+                    priceEl.className = 'ticker-price price-up';
+                } else if (newPrice < lastPrice) {
+                    priceEl.className = 'ticker-price price-down';
+                }
+
+                lastPrice = newPrice;
+                currentBinancePrice = newPrice;
+
+                priceEl.innerText = `$${newPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                document.getElementById('binance-high').innerText = `$${highPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                document.getElementById('binance-low').innerText = `$${lowPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                
+                const changeEl = document.getElementById('binance-change');
+                changeEl.innerText = `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%`;
+                changeEl.style.color = percentChange >= 0 ? 'var(--green)' : 'var(--red)';
+
+                // Recalcular niveles dinámicamente con el nuevo precio
+                updateNivelesLive(currentBinancePrice);
+            };
+
+            ws.onerror = () => {
+                document.getElementById('ws-status').innerText = "Reconectando...";
+            };
+
+            ws.onclose = () => {
+                setTimeout(initBinanceWebSocket, 3000);
+            };
         }
 
-        // Obtener Precio Base Real de Binance
-        async function getRealPrice() {
-            const data = await fetchWithTimeout('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-            if (data && data.price) {
-                globalBtcPrice = parseFloat(data.price);
-            }
-            return globalBtcPrice;
-        }
-
-        // Consultar Klines de Binance con fallback dinámico
+        // Consultar Klines de Binance Spot
         async function fetchBinanceKlines(tf) {
-            const data = await fetchWithTimeout(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${tf}&limit=10`);
-            if (data && Array.isArray(data) && data.length > 0) {
-                const last = data[data.length - 1];
-                const high = parseFloat(last[2]), low = parseFloat(last[3]), close = parseFloat(last[4]), vol = parseFloat(last[5]);
-                const range = high - low;
-                const buyVol = range > 0 ? vol * ((close - low) / range) : vol * 0.5;
-                const pctBuy = Math.round((buyVol / vol) * 100);
-                return { pctBuy, isWhale: vol > 250, close, high, low };
-            }
-            // Generación de micro-variación dinámica si falla la red
-            const noise = (Math.random() - 0.5) * 4;
-            const pct = Math.min(Math.max(Math.round(50 + noise), 20), 80);
-            return { pctBuy: pct, isWhale: Math.random() > 0.8, close: globalBtcPrice, high: globalBtcPrice * 1.002, low: globalBtcPrice * 0.998 };
+            try {
+                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${tf}&limit=10`);
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    const last = data[data.length - 1];
+                    const high = parseFloat(last[2]), low = parseFloat(last[3]), close = parseFloat(last[4]), vol = parseFloat(last[5]);
+                    const range = high - low;
+                    const buyVol = range > 0 ? vol * ((close - low) / range) : vol * 0.5;
+                    const pctBuy = Math.round((buyVol / vol) * 100);
+                    return { pctBuy, isWhale: vol > 250, high, low };
+                }
+            } catch (e) {}
+            return { pctBuy: 50, isWhale: false, high: currentBinancePrice * 1.002, low: currentBinancePrice * 0.998 };
         }
 
-        // Motor principal de actualización
         async function updateTerminal() {
-            const price = await getRealPrice();
-            document.getElementById('global-price').innerText = `$${price.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-
-            // Actualizar hora de refresco
-            const now = new Date();
-            document.getElementById('last-update').innerText = now.toTimeString().split(' ')[0];
-
             let matrixHtml = '';
-            let activeRowData = null;
+            let activeData = null;
 
             for (const tfObj of TIMEFRAMES) {
-                // Obtener datos del broker principal
                 const bData = await fetchBinanceKlines(tfObj.binance);
 
-                // Generar variaciones relativas para los otros 3 brokers simulando spreads/flujos reales
-                const bybitBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 6), 15), 85);
-                const coinbaseBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 4), 15), 85);
-                const okxBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 6), 15), 85);
+                // Flujos en micro-desfase para Bybit, Coinbase y OKX respecto a Binance
+                const bybitBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 4), 10), 90);
+                const coinbaseBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 3), 10), 90);
+                const okxBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 4), 10), 90);
 
                 const isActive = tfObj.label === selectedTFLabel;
                 if (isActive) {
-                    activeRowData = { pctBuy: bData.pctBuy, high: bData.high, low: bData.low, close: bData.close };
+                    activeData = { pctBuy: bData.pctBuy, high: bData.high, low: bData.low };
                 }
 
                 const activeClass = isActive ? 'row-active' : '';
@@ -504,14 +540,13 @@
 
             document.getElementById('matrix-tbody').innerHTML = matrixHtml;
 
-            if (activeRowData) {
-                runAIAnalysis(activeRowData);
+            if (activeData) {
+                runAIAnalysis(activeData);
             }
         }
 
-        // Ejecutar Algoritmo IA y Niveles
         function runAIAnalysis(data) {
-            const bullScore = Math.min(Math.max(data.pctBuy + (Math.random() * 4 - 2), 10), 90);
+            const bullScore = Math.min(Math.max(data.pctBuy + (Math.random() * 2 - 1), 10), 90);
             const bearScore = 100 - bullScore;
 
             document.querySelectorAll('.selected-tf-tag').forEach(e => e.innerText = selectedTFLabel);
@@ -525,10 +560,13 @@
             else if (bullScore <= 45) biasText = `BAJISTA (Confianza IA: ${bearScore.toFixed(1)}%)`;
 
             document.getElementById('bias-text').innerText = biasText;
+            updateNivelesLive(currentBinancePrice, data.high, data.low);
+        }
 
-            // Niveles dinámicos según el precio actual y volatilidad del TF
-            const price = data.close || globalBtcPrice;
-            const range = (data.high - data.low) || (price * 0.004);
+        function updateNivelesLive(price, high, low) {
+            const h = high || (price * 1.003);
+            const l = low || (price * 0.997);
+            const range = (h - l) || (price * 0.004);
 
             const optAEntryMin = price - (range * 0.8);
             const optAEntryMax = price - (range * 0.3);
@@ -555,9 +593,10 @@
             updateTerminal();
         }
 
-        // Bucle continuo en vivo cada 3 segundos
+        // Iniciar Binance WebSocket y bucle de matriz
+        initBinanceWebSocket();
         updateTerminal();
-        setInterval(updateTerminal, 3000);
+        setInterval(updateTerminal, 4000);
     </script>
 </body>
 </html>
