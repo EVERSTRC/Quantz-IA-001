@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantz IA - Terminal Multiexchange & Charting Pro</title>
+    <title>Quantz IA - Terminal Multiexchange & Interactive Charting Pro</title>
     <!-- LIBRERÍA LIGHTWEIGHT CHARTS (TRADINGVIEW) -->
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <style>
@@ -42,14 +42,24 @@
         .pulse-dot { width: 8px; height: 8px; background-color: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
 
-        /* LAYOUT PRINCIPAL (3 COLUMNAS / SECCIONES) */
+        /* LAYOUT PRINCIPAL */
         .main-container { max-width: 1600px; width: 100%; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; flex: 1; }
         @media (max-width: 1200px) { .main-container { grid-template-columns: 1fr; } }
 
         .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); margin-bottom: 20px; }
-        .panel-header { background-color: var(--panel-header); padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .panel-header { background-color: var(--panel-header); padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .panel-title { font-size: 0.95rem; font-weight: 700; color: #ffffff; }
         .panel-body { padding: 20px; flex: 1; }
+
+        /* HERRAMIENTAS DE TRAZADO MANUAL DE NIVELES */
+        .chart-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .input-price { background-color: var(--bg-body); color: var(--text-main); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; font-family: 'Roboto Mono', monospace; width: 110px; outline: none; }
+        .btn-line { background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn-line:hover { border-color: var(--blue); color: var(--blue); }
+        .btn-sup { border-color: var(--green); color: var(--green); }
+        .btn-sup:hover { background-color: var(--green-bg); }
+        .btn-res { border-color: var(--red); color: var(--red); }
+        .btn-res:hover { background-color: var(--red-bg); }
 
         /* CONTENEDOR DEL GRÁFICO */
         #chart-wrapper { width: 100%; height: 420px; position: relative; background-color: #131722; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
@@ -141,10 +151,17 @@
 
         <!-- COLUMNA IZQUIERDA: GRÁFICO + MATRIZ + ACUMULADO -->
         <div>
-            <!-- NUEVA SECCIÓN: GRÁFICO VELAS BINANCE -->
+            <!-- SECCIÓN GRÁFICO CON HERRAMIENTAS MANUALES -->
             <section class="panel">
                 <div class="panel-header">
-                    <span class="panel-title">📈 Gráfico BTC/USDT Live Binance (<span class="selected-tf-tag">1h</span>)</span>
+                    <span class="panel-title">📈 Gráfico BTC/USDT Live (<span class="selected-tf-tag">1h</span>)</span>
+                    <div class="chart-controls">
+                        <input type="number" id="manual-price-input" class="input-price" placeholder="Precio..." step="10">
+                        <button class="btn-line" onclick="setCurrentPriceInput()">Precio Actual</button>
+                        <button class="btn-line btn-sup" onclick="addManualLine('support')">+ Soporte</button>
+                        <button class="btn-line btn-res" onclick="addManualLine('resistance')">+ Resistencia</button>
+                        <button class="btn-line" onclick="clearManualLines()" style="color: var(--text-muted);">🗑️ Borrar</button>
+                    </div>
                 </div>
                 <div class="panel-body" style="padding: 10px;">
                     <div id="chart-wrapper">
@@ -299,6 +316,7 @@
         let selectedTF = '1h';
         let currentBtcPrice = 85180.0;
         let lastPrice = 0;
+        let userPriceLines = [];
 
         // INICIALIZACIÓN DE LIGHTWEIGHT CHARTS (TRADINGVIEW)
         const chartContainer = document.getElementById('tv-chart');
@@ -314,6 +332,36 @@
         });
 
         let klineWs = null;
+
+        // HERRAMIENTAS MANUALES DE SOPORTES Y RESISTENCIAS
+        function setCurrentPriceInput() {
+            document.getElementById('manual-price-input').value = currentBtcPrice.toFixed(1);
+        }
+
+        function addManualLine(type) {
+            const inputVal = parseFloat(document.getElementById('manual-price-input').value);
+            const price = !isNaN(inputVal) && inputVal > 0 ? inputVal : currentBtcPrice;
+            
+            const isSupport = type === 'support';
+            const color = isSupport ? '#0ecb81' : '#f6465d';
+            const title = isSupport ? `[ SOPORTE MANUAL: $${price.toFixed(1)} ]` : `[ RESISTENCIA MANUAL: $${price.toFixed(1)} ]`;
+
+            const priceLine = candlestickSeries.createPriceLine({
+                price: price,
+                color: color,
+                lineWidth: 2,
+                lineStyle: LightweightCharts.LineStyle.Solid,
+                axisLabelVisible: true,
+                title: title,
+            });
+
+            userPriceLines.push(priceLine);
+        }
+
+        function clearManualLines() {
+            userPriceLines.forEach(line => candlestickSeries.removePriceLine(line));
+            userPriceLines = [];
+        }
 
         // WEBSOCKET DE CANDLESTICKS EN VIVO Y HISTÓRICO
         async function loadChartCandles(tf) {
@@ -334,7 +382,6 @@
                 console.error("Error cargando klines históricas", e);
             }
 
-            // Suscribirse al WebSocket de Klines según el Timeframe
             klineWs = new WebSocket(`wss://stream.binance.com:9443/ws/btcusdt@kline_${tf}`);
             klineWs.onmessage = (event) => {
                 const message = JSON.parse(event.data);
@@ -529,7 +576,6 @@
             updateTerminal();
         }
 
-        // Ajustar tamaño del gráfico al redimensionar ventana
         window.addEventListener('resize', () => {
             chart.applyOptions({ width: chartContainer.clientWidth, height: chartContainer.clientHeight });
         });
