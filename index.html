@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Trading Multi-Temporalidad 4 Brokers + IA (k-NN)</title>
+    <title>Dashboard Trading - Selector TF + Alertas Sonoras</title>
     <style>
         :root {
             --bg-dark: #0f1218;
@@ -56,6 +56,57 @@
             color: #f0f0f0;
         }
 
+        .controls-bar {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 12px 20px;
+            border-radius: 8px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .selector-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        select {
+            background-color: #282d35;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            outline: none;
+        }
+
+        select:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-audio {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        .btn-audio.active {
+            background-color: var(--green);
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -64,7 +115,7 @@
         }
 
         th, td {
-            padding: 7px 4px;
+            padding: 10px 6px;
             border: 1px solid var(--border-color);
         }
 
@@ -120,53 +171,59 @@
             white-space: pre-wrap;
             color: #e2e8f0;
         }
-
-        .status-bar {
-            grid-column: 1 / -1;
-            display: flex;
-            justify-content: space-between;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-        }
     </style>
 </head>
 <body>
 
-    <h1 style="margin-bottom: 5px; font-size: 1.6rem;">Dashboard Multi-Temporalidad + IA (k-NN)</h1>
-    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Cálculo de flujo comprador/vendedor por Timeframe (1m a 1M) en Binance, Bybit, Coinbase y OKX</p>
+    <h1 style="margin-bottom: 5px; font-size: 1.6rem;">Dashboard Con Selector de Timeframe + Alertas</h1>
+    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Selecciona la temporalidad deseada para actualizar en tiempo real el análisis de volumen y la IA</p>
 
     <div class="container">
-        <div class="status-bar">
-            <span>BTC Promedio: <strong id="btc-price" style="color: var(--accent);">$0.00</strong></span>
-            <span>RSI (14): <strong id="rsi-val">0.0</strong></span>
-            <span>Estado: <strong id="api-status" style="color: var(--green);">Conectado</strong></span>
+        <!-- BARRA DE CONTROL PRINCIPAL -->
+        <div class="controls-bar">
+            <div class="selector-group">
+                <label for="tf-select" style="font-weight: bold; color: var(--accent);">Timeframe:</label>
+                <select id="tf-select" onchange="onTimeframeChange()">
+                    <option value="1m">1 Minuto (1m)</option>
+                    <option value="5m">5 Minutos (5m)</option>
+                    <option value="15m" selected>15 Minutos (15m)</option>
+                    <option value="1h">1 Hora (1h)</option>
+                    <option value="4h">4 Horas (4h)</option>
+                    <option value="1D">1 Día (1D)</option>
+                    <option value="1W">1 Semana (1W)</option>
+                    <option value="1M">1 Mes (1M)</option>
+                </select>
+            </div>
+
+            <div>
+                <span>BTC Promedio: <strong id="btc-price" style="color: var(--accent);">$0.00</strong></span> | 
+                <span>RSI: <strong id="rsi-val">0.0</strong></span>
+            </div>
+
+            <button id="audio-btn" class="btn-audio" onclick="toggleAudio()">🔔 Activar Sonido Alertas</button>
         </div>
 
-        <!-- DASHBOARD DE BROKERS Y TEMPORALIDADES -->
+        <!-- TABLA DE BROKERS -->
         <div class="card">
-            <h2>📊 Dashboard Multi-TF (Compradores % | Vendedores %)</h2>
+            <h2>📊 Flujo de Volumen (<span id="selected-tf-label">15m</span>)</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>TF</th>
-                        <th>Binance (30%)</th>
-                        <th>Bybit (30%)</th>
-                        <th>Coinbase (20%)</th>
-                        <th>OKX (20%)</th>
+                        <th>Broker</th>
+                        <th>Compradores %</th>
+                        <th>Vendedores %</th>
+                        <th>Anomalía / Ballena</th>
                     </tr>
                 </thead>
                 <tbody id="dashboard-body">
-                    <!-- Filas generadas por JS dinámicamente -->
+                    <!-- Datos generados por JS -->
                 </tbody>
             </table>
         </div>
 
         <!-- MÓDULO IA Y ESTRATEGIA -->
         <div class="card">
-            <h2>🤖 Motor IA k-NN & Análisis Estructural</h2>
+            <h2>🤖 Pronóstico IA k-NN (<span id="selected-tf-label-ai">15m</span>)</h2>
             
             <div class="ai-metrics">
                 <div class="metric-box">
@@ -179,32 +236,79 @@
                 </div>
             </div>
 
-            <div class="analysis-text" id="analysis-box">Cargando datos de las distintas temporalidades...</div>
+            <div class="analysis-text" id="analysis-box">Cargando datos del timeframe seleccionado...</div>
         </div>
     </div>
 
     <script>
-        // Mapeo de temporalidades según la API de cada broker
-        const TIMEFRAMES = [
-            { label: '1m',  binance: '1m',  bybit: '1',   coinbase: '60',    okx: '1m' },
-            { label: '5m',  binance: '5m',  bybit: '5',   coinbase: '300',   okx: '5m' },
-            { label: '15m', binance: '15m', bybit: '15',  coinbase: '900',   okx: '15m' },
-            { label: '1h',  binance: '1h',  bybit: '60',  coinbase: '3600',  okx: '1H' },
-            { label: '4h',  binance: '4h',  bybit: '240', coinbase: '14400', okx: '4H' },
-            { label: '1D',  binance: '1d',  bybit: 'D',   coinbase: '86400', okx: '1D' },
-            { label: '1W',  binance: '1w',  bybit: 'W',   coinbase: '86400', okx: '1W' },
-            { label: '1M',  binance: '1M',  bybit: 'M',   coinbase: '86400', okx: '1M' }
-        ];
+        const TIMEFRAME_MAP = {
+            '1m':  { binance: '1m',  bybit: '1',   coinbase: '60',    okx: '1m' },
+            '5m':  { binance: '5m',  bybit: '5',   coinbase: '300',   okx: '5m' },
+            '15m': { binance: '15m', bybit: '15',  coinbase: '900',   okx: '15m' },
+            '1h':  { binance: '1h',  bybit: '60',  coinbase: '3600',  okx: '1H' },
+            '4h':  { binance: '4h',  bybit: '240', coinbase: '14400', okx: '4H' },
+            '1D':  { binance: '1d',  bybit: 'D',   coinbase: '86400', okx: '1D' },
+            '1W':  { binance: '1w',  bybit: 'W',   coinbase: '86400', okx: '1W' },
+            '1M':  { binance: '1M',  bybit: 'M',   coinbase: '86400', okx: '1M' }
+        };
 
         const WEIGHTS = { binance: 0.30, bybit: 0.30, coinbase: 0.20, okx: 0.20 };
-        const KNN_WINDOW = 100;
         const MIN_CONFIDENCE = 65.0;
-        
+
+        let currentTF = '15m';
         let knnHistory = [];
         let currentRsi = 50.0;
         let lastPrice = 0;
+        let audioEnabled = false;
+        let audioCtx = null;
+        let lastAlertTime = 0;
 
-        // Función auxiliar f_calc() idéntica a la lógica de Pine Script
+        function toggleAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioEnabled = !audioEnabled;
+            const btn = document.getElementById('audio-btn');
+            
+            if (audioEnabled) {
+                btn.innerText = "🔊 Alertas Activas";
+                btn.classList.add('active');
+                playTone(600, 0.1); // Sonido de confirmación
+            } else {
+                btn.innerText = "🔔 Activar Sonido Alertas";
+                btn.classList.remove('active');
+            }
+        }
+
+        function playTone(freq, duration) {
+            if (!audioEnabled || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        function triggerAlertSound(isBullish) {
+            const now = Date.now();
+            if (now - lastAlertTime < 30000) return; // Evitar sonido continuo (máximo 1 vez cada 30s)
+            lastAlertTime = now;
+
+            if (isBullish) {
+                playTone(523.25, 0.15); // C5
+                setTimeout(() => playTone(659.25, 0.15), 150); // E5
+                setTimeout(() => playTone(783.99, 0.3), 300); // G5
+            } else {
+                playTone(783.99, 0.15);
+                setTimeout(() => playTone(659.25, 0.15), 150);
+                setTimeout(() => playTone(523.25, 0.3), 300);
+            }
+        }
+
         function parseKlines(klines) {
             if (!klines || klines.length === 0) return { pctBuy: 50, isWhale: false, close: 0, high: 0, low: 0 };
             
@@ -238,38 +342,48 @@
             return { pctBuy, isWhale, close, high, low };
         }
 
-        // Consultas por temporalidad a cada broker
-        async function fetchTFData(tfObj) {
-            const [binanceData, bybitData, coinbaseData, okxData] = await Promise.all([
-                // Binance
-                fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${tfObj.binance}&limit=20`)
-                    .then(res => res.json())
-                    .then(data => parseKlines(data))
-                    .catch(() => ({ pctBuy: 50, isWhale: false, close: 0 })),
-                // Bybit
-                fetch(`https://api.bybit.com/v5/market/kline?category=spot&symbol=BTCUSDT&interval=${tfObj.bybit}&limit=20`)
-                    .then(res => res.json())
-                    .then(data => parseKlines(data.result.list.map(d => [d[0], d[1], d[2], d[3], d[4], d[5]])))
-                    .catch(() => ({ pctBuy: 50, isWhale: false, close: 0 })),
-                // Coinbase
-                fetch(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=${tfObj.coinbase}`)
-                    .then(res => res.json())
-                    .then(data => parseKlines(data.slice(0, 20).map(d => [d[0]*1000, d[3], d[2], d[1], d[4], d[5]])))
-                    .catch(() => ({ pctBuy: 50, isWhale: false, close: 0 })),
-                // OKX
-                fetch(`https://www.okx.com/api/v5/market/candles?instId=BTC-USDT&bar=${tfObj.okx}&limit=20`)
-                    .then(res => res.json())
-                    .then(data => parseKlines(data.data.map(d => [d[0], d[1], d[2], d[3], d[4], d[5]])))
-                    .catch(() => ({ pctBuy: 50, isWhale: false, close: 0 }))
+        async function fetchExchangeData(tfKey) {
+            const params = TIMEFRAME_MAP[tfKey];
+
+            const [binance, bybit, coinbase, okx] = await Promise.all([
+                fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${params.binance}&limit=20`)
+                    .then(r => r.json()).then(d => parseKlines(d)).catch(() => ({ pctBuy: 50, isWhale: false, close: 0 })),
+
+                fetch(`https://api.bybit.com/v5/market/kline?category=spot&symbol=BTCUSDT&interval=${params.bybit}&limit=20`)
+                    .then(r => r.json()).then(d => parseKlines(d.result.list.map(x => [x[0], x[1], x[2], x[3], x[4], x[5]]))).catch(() => ({ pctBuy: 50, isWhale: false, close: 0 })),
+
+                fetch(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=${params.coinbase}`)
+                    .then(r => r.json()).then(d => parseKlines(d.slice(0, 20).map(x => [x[0]*1000, x[3], x[2], x[1], x[4], x[5]]))).catch(() => ({ pctBuy: 50, isWhale: false, close: 0 })),
+
+                fetch(`https://www.okx.com/api/v5/market/candles?instId=BTC-USDT&bar=${params.okx}&limit=20`)
+                    .then(r => r.json()).then(d => parseKlines(d.data.map(x => [x[0], x[1], x[2], x[3], x[4], x[5]]))).catch(() => ({ pctBuy: 50, isWhale: false, close: 0 }))
             ]);
 
-            return {
-                tf: tfObj.label,
-                binance: binanceData,
-                bybit: bybitData,
-                coinbase: coinbaseData,
-                okx: okxData
-            };
+            return { binance, bybit, coinbase, okx };
+        }
+
+        function runKNN(avgNow, whalesCount, rsi) {
+            const f1 = avgNow / 100.0;
+            const f2 = whalesCount / 4.0;
+            const f3 = rsi / 100.0;
+
+            const target = avgNow >= 50 ? 1 : -1;
+            knnHistory.push({ f1, f2, f3, target });
+            if (knnHistory.length > 100) knnHistory.shift();
+
+            if (knnHistory.length < 5) return { bullScore: 50.0, bearScore: 50.0 };
+
+            let sumBull = 0, sumBear = 0;
+            for (let i = 0; i < knnHistory.length - 1; i++) {
+                const h = knnHistory[i];
+                const dist = Math.sqrt(Math.pow(f1 - h.f1, 2) + Math.pow(f2 - h.f2, 2) + Math.pow(f3 - h.f3, 2));
+                const w = 1.0 / (dist + 0.0001);
+                if (h.target === 1) sumBull += w; else sumBear += w;
+            }
+
+            const total = sumBull + sumBear;
+            const bullScore = total > 0 ? (sumBull / total) * 100 : 50;
+            return { bullScore, bearScore: 100 - bullScore };
         }
 
         function updateRSI(newPrice) {
@@ -282,180 +396,139 @@
             return Math.min(Math.max(currentRsi, 10), 90);
         }
 
-        function runKNN(avgNow, whalesCount, rsi) {
-            const f1 = avgNow / 100.0;
-            const f2 = whalesCount / 8.0;
-            const f3 = rsi / 100.0;
-
-            const currentTarget = avgNow >= 50 ? 1 : -1;
-            knnHistory.push({ f1, f2, f3, target: currentTarget });
-            if (knnHistory.length > KNN_WINDOW) knnHistory.shift();
-
-            if (knnHistory.length < 10) return { bullScore: 50.0, bearScore: 50.0 };
-
-            let sumBullWeight = 0.0;
-            let sumBearWeight = 0.0;
-
-            for (let i = 0; i < knnHistory.length - 1; i++) {
-                const hist = knnHistory[i];
-                const d1 = Math.pow(f1 - hist.f1, 2);
-                const d2 = Math.pow(f2 - hist.f2, 2);
-                const d3 = Math.pow(f3 - hist.f3, 2);
-                const dist = Math.sqrt(d1 + d2 + d3);
-
-                const weight = 1.0 / (dist + 0.0001);
-                if (hist.target === 1) sumBullWeight += weight;
-                else sumBearWeight += weight;
-            }
-
-            const totalW = sumBullWeight + sumBearWeight;
-            const bullScore = totalW > 0 ? (sumBullWeight / totalW) * 100.0 : 50.0;
-            const bearScore = 100.0 - bullScore;
-
-            return { bullScore, bearScore };
-        }
-
         async function updateDashboard() {
-            try {
-                // Ejecutar consultas simultáneas para todas las temporalidades
-                const results = await Promise.all(TIMEFRAMES.map(tf => fetchTFData(tf)));
+            const data = await fetchExchangeData(currentTF);
 
-                // Obtener datos del primer TF (1m) para precio general y RSI
-                const tf1m = results[0];
-                const validPrices = [tf1m.binance.close, tf1m.bybit.close, tf1m.coinbase.close, tf1m.okx.close].filter(p => p > 0);
-                const avgPrice = validPrices.reduce((a, b) => a + b, 0) / (validPrices.length || 1);
-                const rsi = updateRSI(avgPrice);
+            const prices = [data.binance.close, data.bybit.close, data.coinbase.close, data.okx.close].filter(p => p > 0);
+            const avgPrice = prices.reduce((a, b) => a + b, 0) / (prices.length || 1);
+            const rsi = updateRSI(avgPrice);
 
-                document.getElementById('btc-price').innerText = `$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-                document.getElementById('rsi-val').innerText = rsi.toFixed(1);
+            document.getElementById('btc-price').innerText = `$${avgPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            document.getElementById('rsi-val').innerText = rsi.toFixed(1);
 
-                // Ponderación de 1m y 5m (igual al script Pine)
-                const tf5m = results[1];
-                const w1m = (tf1m.binance.pctBuy * WEIGHTS.binance) + (tf1m.bybit.pctBuy * WEIGHTS.bybit) + (tf1m.coinbase.pctBuy * WEIGHTS.coinbase) + (tf1m.okx.pctBuy * WEIGHTS.okx);
-                const w5m = (tf5m.binance.pctBuy * WEIGHTS.binance) + (tf5m.bybit.pctBuy * WEIGHTS.bybit) + (tf5m.coinbase.pctBuy * WEIGHTS.coinbase) + (tf5m.okx.pctBuy * WEIGHTS.okx);
-                const avgNow = (w1m + w5m) / 2.0;
+            const weightedBuy = (data.binance.pctBuy * WEIGHTS.binance) + 
+                                (data.bybit.pctBuy * WEIGHTS.bybit) + 
+                                (data.coinbase.pctBuy * WEIGHTS.coinbase) + 
+                                (data.okx.pctBuy * WEIGHTS.okx);
 
-                const shortWhales = (tf1m.binance.isWhale?1:0) + (tf1m.bybit.isWhale?1:0) + (tf1m.coinbase.isWhale?1:0) + (tf1m.okx.isWhale?1:0) +
-                                    (tf5m.binance.isWhale?1:0) + (tf5m.bybit.isWhale?1:0) + (tf5m.coinbase.isWhale?1:0) + (tf5m.okx.isWhale?1:0);
+            const whaleCount = (data.binance.isWhale?1:0) + (data.bybit.isWhale?1:0) + (data.coinbase.isWhale?1:0) + (data.okx.isWhale?1:0);
 
-                // Algoritmo IA
-                const { bullScore, bearScore } = runKNN(avgNow, shortWhales, rsi);
+            const { bullScore, bearScore } = runKNN(weightedBuy, whaleCount, rsi);
 
-                document.getElementById('ai-bull').innerText = `${bullScore.toFixed(1)}%`;
-                document.getElementById('ai-bear').innerText = `${bearScore.toFixed(1)}%`;
+            document.getElementById('ai-bull').innerText = `${bullScore.toFixed(1)}%`;
+            document.getElementById('ai-bear').innerText = `${bearScore.toFixed(1)}%`;
 
-                // Renderizar la tabla completa con todas las temporalidades
-                renderTable(results, avgNow, shortWhales, bullScore, bearScore);
-                renderAnalysis(avgPrice, tf1m.binance.high, tf1m.binance.low, bullScore, bearScore, avgNow);
+            // Reproducir sonido si supera la confianza
+            if (bullScore >= MIN_CONFIDENCE) triggerAlertSound(true);
+            else if (bearScore >= MIN_CONFIDENCE) triggerAlertSound(false);
 
-            } catch (err) {
-                console.error("Error cargando temporalidades:", err);
-            }
+            renderTable(data, weightedBuy, whaleCount, bullScore, bearScore);
+            renderAnalysis(avgPrice, data.binance.high, data.binance.low, bullScore, bearScore, weightedBuy);
         }
 
-        function renderTable(tfResults, avgNow, shortWhales, bullScore, bearScore) {
-            const tbody = document.getElementById('dashboard-body');
+        function renderTable(data, weightedBuy, whaleCount, bullScore, bearScore) {
+            const exchanges = [
+                { name: 'Binance (30%)', data: data.binance },
+                { name: 'Bybit (30%)', data: data.bybit },
+                { name: 'Coinbase (20%)', data: data.coinbase },
+                { name: 'OKX (20%)', data: data.okx }
+            ];
+
             let html = '';
+            exchanges.forEach(ex => {
+                const buy = ex.data.pctBuy;
+                const sell = 100 - buy;
+                const cellClass = buy >= 50 ? 'cell-green' : 'cell-red';
 
-            tfResults.forEach(row => {
-                const brokers = [
-                    { data: row.binance },
-                    { data: row.bybit },
-                    { data: row.coinbase },
-                    { data: row.okx }
-                ];
-
-                html += `<tr><td class="cell-header">${row.tf}</td>`;
-                brokers.forEach(b => {
-                    const pctB = b.data.pctBuy;
-                    const pctS = 100 - pctB;
-                    const cellClass = pctB >= 50 ? 'cell-green' : 'cell-red';
-                    html += `<td class="${cellClass}">${pctB}% | ${pctS}%${b.data.isWhale ? ' 🐋' : ''}</td>`;
-                });
-                html += `</tr>`;
+                html += `
+                    <tr>
+                        <td class="cell-header">${ex.name}</td>
+                        <td class="${cellClass}">${buy}%</td>
+                        <td class="${cellClass}">${sell}%</td>
+                        <td>${ex.data.isWhale ? '🐋 Ballena Detectada' : 'Normal'}</td>
+                    </tr>
+                `;
             });
 
-            // Fila "AHORA MISMO"
-            let actionText = "⏳ Mercado en Espera";
+            // Resumen de la temporalidad seleccionada
+            let actionText = "⏳ Consolidación / Rango";
             let actionBg = "#334155";
-            if (shortWhales >= 2) {
-                actionText = "🐋 Ballenas Absorbiendo";
+            if (whaleCount >= 2) {
+                actionText = "🐋 Absorción Importante de Ballenas";
                 actionBg = "#8232ca";
-            } else if (avgNow >= 60) {
-                actionText = "🚀 Comprando con Fuerza";
+            } else if (weightedBuy >= 58) {
+                actionText = "🚀 Dominio Comprador Claro";
                 actionBg = "#10783c";
-            } else if (avgNow <= 40) {
-                actionText = "💥 Vendiendo con Fuerza";
+            } else if (weightedBuy <= 42) {
+                actionText = "💥 Presión Vendedora Dominante";
                 actionBg = "#b42832";
             }
 
             html += `
                 <tr>
-                    <td class="cell-header">AHORA</td>
-                    <td colspan="4" class="merged-row" style="background-color: ${actionBg}; color: white;">${actionText}</td>
+                    <td class="cell-header">ESTADO (${currentTF})</td>
+                    <td colspan="3" class="merged-row" style="background-color: ${actionBg}; color: white;">${actionText}</td>
                 </tr>
             `;
 
-            // Predicción IA
             let aiText = "🤖 IA: NEUTRAL";
             let aiBg = "#334155";
             if (bullScore >= MIN_CONFIDENCE) {
-                aiText = `🤖 IA: COMPRAR (${bullScore.toFixed(1)}%)`;
+                aiText = `🤖 IA: SEÑAL ALCISTA (${bullScore.toFixed(1)}%)`;
                 aiBg = "#10783c";
             } else if (bearScore >= MIN_CONFIDENCE) {
-                aiText = `🤖 IA: VENDER (${bearScore.toFixed(1)}%)`;
+                aiText = `🤖 IA: SEÑAL BAJISTA (${bearScore.toFixed(1)}%)`;
                 aiBg = "#b42832";
             }
 
             html += `
                 <tr>
-                    <td class="cell-header">IA PRED.</td>
-                    <td colspan="4" class="merged-row" style="background-color: ${aiBg}; color: white;">${aiText}</td>
+                    <td class="cell-header">SEÑAL IA</td>
+                    <td colspan="3" class="merged-row" style="background-color: ${aiBg}; color: white;">${aiText}</td>
                 </tr>
             `;
 
-            tbody.innerHTML = html;
+            document.getElementById('dashboard-body').innerHTML = html;
         }
 
-        function renderAnalysis(price, high, low, bullScore, bearScore, avgNow) {
+        function renderAnalysis(price, high, low, bullScore, bearScore, weightedBuy) {
             const atr = (high - low) || (price * 0.005);
             
-            const optAEntryMin = Math.max(low, price - (atr * 1.5));
-            const optAEntryMax = optAEntryMin + (atr * 0.5);
-            const optASl = optAEntryMin - (atr * 1.2);
-            const optATp1 = price + (atr * 1.5);
-            const optATp2 = high || (price + (atr * 3));
+            const entryMin = Math.max(low, price - (atr * 1.2));
+            const entryMax = entryMin + (atr * 0.4);
+            const sl = entryMin - (atr * 1.0);
+            const tp1 = price + (atr * 1.5);
+            const tp2 = high || (price + (atr * 2.5));
 
-            const optBEntry = high || (price + (atr * 1.0));
-            const optBSl = price - (atr * 1.0);
-            const optBTp1 = optBEntry + (atr * 2.5);
+            let bias = "NEUTRAL";
+            if (bullScore >= MIN_CONFIDENCE) bias = `ALCISTA (${bullScore.toFixed(1)}%)`;
+            else if (bearScore >= MIN_CONFIDENCE) bias = `BAJISTA (${bearScore.toFixed(1)}%)`;
 
-            let bias = "NEUTRAL / EN RANGO";
-            if (bullScore >= MIN_CONFIDENCE) bias = `ALCISTA (IA ${bullScore.toFixed(1)}%)`;
-            else if (bearScore >= MIN_CONFIDENCE) bias = `BAJISTA (IA ${bearScore.toFixed(1)}%)`;
-
-            const text = `🤖 ANÁLISIS ESTRUCTURAL IA MULTI-TF
+            const text = `🎯 ANÁLISIS ESTRUCTURAL [TF: ${currentTF}]
 --------------------------------------------------
-📍 Sesgo Actual: ${bias}
-⚠️ ZONA NEUTRA: Evitar operar cerca de $${price.toFixed(2)}
+📍 Sesgo Principal: ${bias}
+💵 Precio BTC: $${price.toFixed(2)}
 
-🔹 OPCIÓN A: Retroceso al Soporte (Mayor R/R)
- • Entrada (Limit): $${optAEntryMin.toFixed(2)} - $${optAEntryMax.toFixed(2)}
- • Stop Loss (SL): $${optASl.toFixed(2)}
- • Take Profit: TP1 $${optATp1.toFixed(2)} | TP2 $${optATp2.toFixed(2)}
+🔹 Configuración de Entrada Recomendada:
+ • Zona de Entrada: $${entryMin.toFixed(2)} - $${entryMax.toFixed(2)}
+ • Stop Loss (SL): $${sl.toFixed(2)}
+ • Objetivo 1 (TP1): $${tp1.toFixed(2)}
+ • Objetivo 2 (TP2): $${tp2.toFixed(2)}
 
-🔹 OPCIÓN B: Ruptura / Confirmación
- • Entrada: Cierre sobre $${optBEntry.toFixed(2)} con volumen
- • Confirmación IA: Score > ${MIN_CONFIDENCE}%
- • Stop Loss (SL): $${optBSl.toFixed(2)}
- • Take Profit: $${optBTp1.toFixed(2)}
-
-💡 Resumen: ${avgNow >= 55 ? "Presión compradora activa." : "Consolidación de precio."}`;
+💡 Fuerza Compradora Global: ${weightedBuy.toFixed(1)}%`;
 
             document.getElementById('analysis-box').innerText = text;
         }
 
-        // Carga inicial y refresco continuo cada 5 segundos
+        function onTimeframeChange() {
+            currentTF = document.getElementById('tf-select').value;
+            document.getElementById('selected-tf-label').innerText = currentTF;
+            document.getElementById('selected-tf-label-ai').innerText = currentTF;
+            knnHistory = []; // Reiniciar la ventana k-NN para la nueva temporalidad
+            updateDashboard();
+        }
+
+        // Bucle de refresco continuo cada 5 segundos
         updateDashboard();
         setInterval(updateDashboard, 5000);
     </script>
