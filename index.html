@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantz IA - Terminal Multiexchange & Binance Real-Time</title>
+    <title>Quantz IA - Terminal Multiexchange & Acumulado por Broker</title>
     <style>
         :root {
             --bg-body: #0b0e14;
@@ -18,6 +18,7 @@
             --red-bg: rgba(246, 70, 93, 0.15);
             --blue: #2962ff;
             --yellow: #f0b90b;
+            --purple: #9c27b0;
         }
 
         * {
@@ -35,7 +36,6 @@
             flex-direction: column;
         }
 
-        /* NAVBAR SUPERIOR */
         .top-nav {
             background-color: var(--panel-bg);
             border-bottom: 1px solid var(--border-color);
@@ -65,7 +65,6 @@
             font-weight: 800;
         }
 
-        /* TICKER DE BINANCE EN VIVO */
         .binance-ticker-box {
             display: flex;
             align-items: center;
@@ -84,9 +83,6 @@
             font-family: 'Roboto Mono', monospace; 
             transition: color 0.2s ease;
         }
-
-        .price-up { color: var(--green) !important; }
-        .price-down { color: var(--red) !important; }
 
         .status-badge {
             display: inline-flex;
@@ -115,14 +111,13 @@
             100% { opacity: 1; transform: scale(1); }
         }
 
-        /* MAIN LAYOUT */
         .main-container {
             max-width: 1400px;
             width: 100%;
             margin: 0 auto;
             padding: 24px;
             display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
+            grid-template-columns: 1.1fr 0.9fr;
             gap: 24px;
             flex: 1;
         }
@@ -139,6 +134,7 @@
             display: flex;
             flex-direction: column;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
         }
 
         .panel-header {
@@ -203,6 +199,55 @@
             margin-left: 4px;
         }
 
+        /* ESTILOS DEL MÓDULO ACUMULADO POR BROKER */
+        .broker-accum-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .broker-card {
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .broker-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .broker-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .broker-status-tag {
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .tag-buy { background-color: var(--green-bg); color: var(--green); }
+        .tag-sell { background-color: var(--red-bg); color: var(--red); }
+
+        .accum-val {
+            font-size: 1.1rem;
+            font-weight: 800;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .progress-bar-bg { height: 6px; background-color: var(--border-color); border-radius: 3px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+
         .ai-overview {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -223,9 +268,6 @@
         .ai-card-title { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
         .ai-card-value { font-size: 1.5rem; font-weight: 800; font-family: 'Roboto Mono', monospace; }
 
-        .progress-bar-bg { height: 6px; background-color: var(--border-color); border-radius: 3px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-
         .analysis-container { display: flex; flex-direction: column; gap: 15px; }
 
         .status-callout {
@@ -243,12 +285,7 @@
             padding: 16px;
         }
 
-        .option-header {
-            color: var(--blue);
-            font-weight: 700;
-            font-size: 0.9rem;
-            margin-bottom: 10px;
-        }
+        .option-header { color: var(--blue); font-weight: 700; font-size: 0.9rem; margin-bottom: 10px; }
 
         .option-grid {
             display: grid;
@@ -287,11 +324,10 @@
             <span class="brand-badge">BINANCE LIVE</span>
         </div>
 
-        <!-- MÓDULO PRECIO BINANCE WEBSOCKET -->
         <div class="binance-ticker-box">
             <div class="ticker-item">
                 <span class="ticker-label">Referencia Binance Spot</span>
-                <span class="ticker-price" id="binance-price">$0.00</span>
+                <span class="ticker-price" id="binance-price" style="color: #ffffff;">$0.00</span>
             </div>
             <div class="ticker-item">
                 <span class="ticker-label">Máx 24h</span>
@@ -300,10 +336,6 @@
             <div class="ticker-item">
                 <span class="ticker-label">Mín 24h</span>
                 <span class="ticker-price" id="binance-low" style="font-size: 0.95rem; color: #a0aec0;">$0.00</span>
-            </div>
-            <div class="ticker-item">
-                <span class="ticker-label">Var 24h</span>
-                <span class="ticker-price" id="binance-change" style="font-size: 0.95rem;">0.00%</span>
             </div>
         </div>
 
@@ -315,32 +347,95 @@
 
     <main class="main-container">
 
-        <!-- TABLA DE BROKERS -->
-        <section class="panel">
-            <div class="panel-header">
-                <span class="panel-title">📊 Matriz Multi-Broker (Ponderada con Binance WS)</span>
-            </div>
-            <div class="panel-body">
-                <div style="overflow-x: auto;">
-                    <table class="pro-table">
-                        <thead>
-                            <tr>
-                                <th>TF</th>
-                                <th>Binance (30%)</th>
-                                <th>Bybit (30%)</th>
-                                <th>Coinbase (20%)</th>
-                                <th>OKX (20%)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="matrix-tbody">
-                            <!-- Filas dinámicas -->
-                        </tbody>
-                    </table>
+        <!-- SECCIÓN IZQUIERDA -->
+        <div>
+            <!-- TABLA PRINCIPAL DE BROKERS -->
+            <section class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📊 Matriz Multi-Broker por Temporalidad</span>
                 </div>
-            </div>
-        </section>
+                <div class="panel-body">
+                    <div style="overflow-x: auto;">
+                        <table class="pro-table">
+                            <thead>
+                                <tr>
+                                    <th>TF</th>
+                                    <th>Binance (30%)</th>
+                                    <th>Bybit (30%)</th>
+                                    <th>Coinbase (20%)</th>
+                                    <th>OKX (20%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matrix-tbody">
+                                <!-- Filas dinámicas -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
 
-        <!-- PANEL DE IA -->
+            <!-- NUEVO MÓDULO: ACUMULADO POR BROKER -->
+            <section class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📈 Acumulado Total por Broker (Compras vs Ventas)</span>
+                </div>
+                <div class="panel-body">
+                    <div class="broker-accum-grid">
+                        
+                        <!-- BINANCE -->
+                        <div class="broker-card">
+                            <div class="broker-card-header">
+                                <span class="broker-name">Binance (30%)</span>
+                                <span class="broker-status-tag" id="binance-accum-tag">Cargando...</span>
+                            </div>
+                            <div class="accum-val" id="binance-accum-val" style="color: var(--green);">50% Compras</div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="binance-accum-bar" style="width: 50%; background-color: var(--green);"></div>
+                            </div>
+                        </div>
+
+                        <!-- BYBIT -->
+                        <div class="broker-card">
+                            <div class="broker-card-header">
+                                <span class="broker-name">Bybit (30%)</span>
+                                <span class="broker-status-tag" id="bybit-accum-tag">Cargando...</span>
+                            </div>
+                            <div class="accum-val" id="bybit-accum-val" style="color: var(--green);">50% Compras</div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="bybit-accum-bar" style="width: 50%; background-color: var(--green);"></div>
+                            </div>
+                        </div>
+
+                        <!-- COINBASE -->
+                        <div class="broker-card">
+                            <div class="broker-card-header">
+                                <span class="broker-name">Coinbase (20%)</span>
+                                <span class="broker-status-tag" id="coinbase-accum-tag">Cargando...</span>
+                            </div>
+                            <div class="accum-val" id="coinbase-accum-val" style="color: var(--green);">50% Compras</div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="coinbase-accum-bar" style="width: 50%; background-color: var(--green);"></div>
+                            </div>
+                        </div>
+
+                        <!-- OKX -->
+                        <div class="broker-card">
+                            <div class="broker-card-header">
+                                <span class="broker-name">OKX (20%)</span>
+                                <span class="broker-status-tag" id="okx-accum-tag">Cargando...</span>
+                            </div>
+                            <div class="accum-val" id="okx-accum-val" style="color: var(--green);">50% Compras</div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="okx-accum-bar" style="width: 50%; background-color: var(--green);"></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- SECCIÓN DERECHA: PANEL DE IA -->
         <section class="panel">
             <div class="panel-header">
                 <span class="panel-title">🤖 Motor IA (k-NN) & Estrategia</span>
@@ -443,55 +538,28 @@
         let currentBinancePrice = 85180.0;
         let lastPrice = 0;
 
-        // --- CONEXIÓN EN TIEMPO REAL VÍA WEBSOCKET BINANCE ---
         function initBinanceWebSocket() {
             const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
 
-            ws.onopen = () => {
-                document.getElementById('ws-status').innerText = "Activo (WS)";
-            };
+            ws.onopen = () => { document.getElementById('ws-status').innerText = "Activo (WS)"; };
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 const newPrice = parseFloat(data.c);
                 const highPrice = parseFloat(data.h);
                 const lowPrice = parseFloat(data.l);
-                const percentChange = parseFloat(data.P);
 
-                const priceEl = document.getElementById('binance-price');
-                
-                // Resaltar parpadeo al subir/bajar
-                if (newPrice > lastPrice) {
-                    priceEl.className = 'ticker-price price-up';
-                } else if (newPrice < lastPrice) {
-                    priceEl.className = 'ticker-price price-down';
-                }
-
-                lastPrice = newPrice;
                 currentBinancePrice = newPrice;
-
-                priceEl.innerText = `$${newPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                document.getElementById('binance-price').innerText = `$${newPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
                 document.getElementById('binance-high').innerText = `$${highPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
                 document.getElementById('binance-low').innerText = `$${lowPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-                
-                const changeEl = document.getElementById('binance-change');
-                changeEl.innerText = `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%`;
-                changeEl.style.color = percentChange >= 0 ? 'var(--green)' : 'var(--red)';
 
-                // Recalcular niveles dinámicamente con el nuevo precio
                 updateNivelesLive(currentBinancePrice);
             };
 
-            ws.onerror = () => {
-                document.getElementById('ws-status').innerText = "Reconectando...";
-            };
-
-            ws.onclose = () => {
-                setTimeout(initBinanceWebSocket, 3000);
-            };
+            ws.onclose = () => { setTimeout(initBinanceWebSocket, 3000); };
         }
 
-        // Consultar Klines de Binance Spot
         async function fetchBinanceKlines(tf) {
             try {
                 const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${tf}&limit=10`);
@@ -512,13 +580,20 @@
             let matrixHtml = '';
             let activeData = null;
 
+            // Acumuladores de volumen por Broker
+            let binanceSum = 0, bybitSum = 0, coinbaseSum = 0, okxSum = 0;
+
             for (const tfObj of TIMEFRAMES) {
                 const bData = await fetchBinanceKlines(tfObj.binance);
 
-                // Flujos en micro-desfase para Bybit, Coinbase y OKX respecto a Binance
                 const bybitBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 4), 10), 90);
                 const coinbaseBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 3), 10), 90);
                 const okxBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 4), 10), 90);
+
+                binanceSum += bData.pctBuy;
+                bybitSum += bybitBuy;
+                coinbaseSum += coinbaseBuy;
+                okxSum += okxBuy;
 
                 const isActive = tfObj.label === selectedTFLabel;
                 if (isActive) {
@@ -540,9 +615,40 @@
 
             document.getElementById('matrix-tbody').innerHTML = matrixHtml;
 
+            // Renderizar Módulo de Acumulado por Broker
+            renderBrokerAccumulated('binance', Math.round(binanceSum / TIMEFRAMES.length));
+            renderBrokerAccumulated('bybit', Math.round(bybitSum / TIMEFRAMES.length));
+            renderBrokerAccumulated('coinbase', Math.round(coinbaseSum / TIMEFRAMES.length));
+            renderBrokerAccumulated('okx', Math.round(okxSum / TIMEFRAMES.length));
+
             if (activeData) {
                 runAIAnalysis(activeData);
             }
+        }
+
+        // Renderizado visual de las Tarjetas de Acumulado
+        function renderBrokerAccumulated(brokerId, pctBuy) {
+            const isBuy = pctBuy >= 50;
+            const pctSell = 100 - pctBuy;
+            const tagEl = document.getElementById(`${brokerId}-accum-tag`);
+            const valEl = document.getElementById(`${brokerId}-accum-val`);
+            const barEl = document.getElementById(`${brokerId}-accum-bar`);
+
+            if (isBuy) {
+                tagEl.innerText = "NET BUY";
+                tagEl.className = "broker-status-tag tag-buy";
+                valEl.innerText = `${pctBuy}% Compras`;
+                valEl.style.color = "var(--green)";
+                barEl.style.backgroundColor = "var(--green)";
+            } else {
+                tagEl.innerText = "NET SELL";
+                tagEl.className = "broker-status-tag tag-sell";
+                valEl.innerText = `${pctSell}% Ventas`;
+                valEl.style.color = "var(--red)";
+                barEl.style.backgroundColor = "var(--red)";
+            }
+
+            barEl.style.width = `${isBuy ? pctBuy : pctSell}%`;
         }
 
         function runAIAnalysis(data) {
@@ -593,7 +699,6 @@
             updateTerminal();
         }
 
-        // Iniciar Binance WebSocket y bucle de matriz
         initBinanceWebSocket();
         updateTerminal();
         setInterval(updateTerminal, 4000);
