@@ -32,7 +32,7 @@
         .binance-ticker-box { display: flex; align-items: center; gap: 20px; background-color: var(--bg-body); padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
         .ticker-item { display: flex; flex-direction: column; }
         .ticker-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
-        .ticker-price { font-size: 1.2rem; font-weight: 800; font-family: 'Roboto Mono', monospace; transition: color 0.2s ease; }
+        .ticker-price { font-size: 1.25rem; font-weight: 800; font-family: 'Roboto Mono', monospace; transition: color 0.2s ease; }
         .price-up { color: var(--green) !important; }
         .price-down { color: var(--red) !important; }
 
@@ -54,7 +54,6 @@
         .pro-table th { background-color: var(--bg-body); color: var(--text-muted); padding: 10px 8px; font-weight: 600; border-bottom: 1px solid var(--border-color); font-size: 0.75rem; text-transform: uppercase; }
         .pro-table td { padding: 8px 6px; border-bottom: 1px solid #1f2430; font-family: 'Roboto Mono', monospace; }
         .row-active { outline: 2px solid var(--yellow); background-color: rgba(240, 185, 11, 0.08) !important; }
-        .tf-cell { font-weight: 700; color: var(--text-muted); background-color: rgba(255, 255, 255, 0.02); }
         .cell-buy { background-color: var(--green-bg); color: var(--green); font-weight: 600; border-radius: 4px; padding: 3px 8px; }
         .cell-sell { background-color: var(--red-bg); color: var(--red); font-weight: 600; border-radius: 4px; padding: 3px 8px; }
         .whale-badge { background-color: rgba(156, 39, 176, 0.25); color: #d8b4fe; font-size: 0.7rem; padding: 2px 5px; border-radius: 3px; margin-left: 4px; }
@@ -99,16 +98,16 @@
 </head>
 <body>
 
-    <!-- NAVBAR SUPERIOR -->
+    <!-- NAVBAR SUPERIOR CON TICKER EN TIEMPO REAL -->
     <header class="top-nav">
         <div class="brand">
             <span>Quantz IA</span>
-            <span class="brand-badge">PRO TERMINAL</span>
+            <span class="brand-badge">BINANCE LIVE</span>
         </div>
 
         <div class="binance-ticker-box">
             <div class="ticker-item">
-                <span class="ticker-label">Referencia Binance Spot</span>
+                <span class="ticker-label">BTC/USDT Binance Spot</span>
                 <span class="ticker-price" id="binance-price" style="color: #ffffff;">$0.00</span>
             </div>
             <div class="ticker-item">
@@ -127,7 +126,7 @@
 
         <div class="status-badge">
             <span class="pulse-dot"></span>
-            <span>WebSocket: <strong id="ws-status" style="color: #fff;">Conectado</strong></span>
+            <span>WebSocket: <strong id="ws-status" style="color: #fff;">Conectando...</strong></span>
         </div>
     </header>
 
@@ -283,11 +282,13 @@
         let currentBtcPrice = 85180.0;
         let lastPrice = 0;
 
-        // WEBSOCKET BINANCE SPOT
+        // WEBSOCKET BINANCE SPOT TIEMPO REAL
         function initBinanceWebSocket() {
             const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
 
-            ws.onopen = () => { document.getElementById('ws-status').innerText = "Activo (WS)"; };
+            ws.onopen = () => { 
+                document.getElementById('ws-status').innerText = "Activo (WS)"; 
+            };
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
@@ -301,16 +302,19 @@
                 lastPrice = newPrice;
                 currentBtcPrice = newPrice;
 
-                priceEl.innerText = `$${newPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-                document.getElementById('binance-high').innerText = `$${highPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-                document.getElementById('binance-low').innerText = `$${lowPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                priceEl.innerText = `$${newPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                document.getElementById('binance-high').innerText = `$${highPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                document.getElementById('binance-low').innerText = `$${lowPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
                 const changeEl = document.getElementById('binance-change');
                 changeEl.innerText = `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%`;
                 changeEl.style.color = percentChange >= 0 ? 'var(--green)' : 'var(--red)';
             };
 
-            ws.onclose = () => { setTimeout(initBinanceWebSocket, 3000); };
+            ws.onclose = () => { 
+                document.getElementById('ws-status').innerText = "Reconectando...";
+                setTimeout(initBinanceWebSocket, 3000); 
+            };
         }
 
         async function fetchKlines(tf) {
