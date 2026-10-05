@@ -112,7 +112,10 @@
         .metric-card .val { font-size: 0.95rem; font-weight: 800; font-family: 'Roboto Mono', monospace; }
 
         .trade-option-card { background-color: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
-        .option-header { color: var(--blue); font-weight: 700; font-size: 0.88rem; margin-bottom: 10px; }
+        .option-header { display: flex; justify-content: space-between; align-items: center; color: var(--blue); font-weight: 700; font-size: 0.88rem; margin-bottom: 10px; }
+        .btn-mt5 { background-color: var(--panel-bg); border: 1px solid var(--blue); color: var(--cyan); padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn-mt5:hover { background-color: var(--blue); color: #fff; }
+        
         .option-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
         .option-item { background-color: var(--panel-bg); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color); }
         .option-item .lbl { font-size: 0.68rem; color: var(--text-muted); margin-bottom: 2px; }
@@ -302,7 +305,10 @@
 
                 <!-- OPCIÓN A: RETROCESO -->
                 <div class="trade-option-card">
-                    <div class="option-header">🔹 OPCIÓN A: Retroceso al Soporte (Mayor R/R)</div>
+                    <div class="option-header">
+                        <span>🔹 OPCIÓN A: Retroceso al Soporte (Mayor R/R)</span>
+                        <button class="btn-mt5" onclick="sendToMetaTrader5('A')">📲 Enviar a MT5</button>
+                    </div>
                     <div class="option-grid">
                         <div class="option-item"><div class="lbl">Zona Entrada</div><div class="val" id="opt-a-entry" style="color: var(--yellow);">$0.00</div></div>
                         <div class="option-item"><div class="lbl">Stop Loss (SL)</div><div class="val" id="opt-a-sl" style="color: var(--red);">$0.00</div></div>
@@ -313,7 +319,10 @@
 
                 <!-- OPCIÓN B: RUPTURA -->
                 <div class="trade-option-card">
-                    <div class="option-header">🔹 OPCIÓN B: Ruptura / Breakout</div>
+                    <div class="option-header">
+                        <span>🔹 OPCIÓN B: Ruptura / Breakout</span>
+                        <button class="btn-mt5" onclick="sendToMetaTrader5('B')">📲 Enviar a MT5</button>
+                    </div>
                     <div class="option-grid">
                         <div class="option-item"><div class="lbl">Entrada Ruptura</div><div class="val" id="opt-b-entry" style="color: var(--blue);">$0.00</div></div>
                         <div class="option-item"><div class="lbl">Stop Loss (SL)</div><div class="val" id="opt-b-sl" style="color: var(--red);">$0.00</div></div>
@@ -353,6 +362,48 @@
         });
 
         let klineWs = null;
+
+        // ENVÍO DE NIVELES Y ZONAS A METATRADER 5 (MQL5)
+        async function sendToMetaTrader5(optionType) {
+            let entryLow, entryHigh, sl, tp1, tp2;
+
+            if (optionType === 'A') {
+                const entryText = document.getElementById('opt-a-entry').innerText.replace(/\$/g, '').split(' - ');
+                entryLow = parseFloat(entryText[0]);
+                entryHigh = parseFloat(entryText[1] || entryText[0]);
+                sl = parseFloat(document.getElementById('opt-a-sl').innerText.replace('$', ''));
+                tp1 = parseFloat(document.getElementById('opt-a-tp1').innerText.replace('$', ''));
+                tp2 = parseFloat(document.getElementById('opt-a-tp2').innerText.replace('$', ''));
+            } else {
+                entryLow = parseFloat(document.getElementById('opt-b-entry').innerText.replace('$', ''));
+                entryHigh = entryLow;
+                sl = parseFloat(document.getElementById('opt-b-sl').innerText.replace('$', ''));
+                tp1 = parseFloat(document.getElementById('opt-b-tp1').innerText.replace('$', ''));
+                tp2 = 0;
+            }
+
+            const payload = {
+                symbol: "BTCUSD",
+                type: optionType,
+                entry_low: entryLow,
+                entry_high: entryHigh,
+                sl: sl,
+                tp1: tp1,
+                tp2: tp2,
+                timestamp: Date.now()
+            };
+
+            try {
+                await fetch('http://127.0.0.1:8080/signals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                alert('✅ Nivel y zonas enviadas exitosamente a MetaTrader 5.');
+            } catch (e) {
+                alert('⚠️ Conexión lista: Asegúrate de tener ejecutando el script/bridge local de MT5 en el puerto 8080.');
+            }
+        }
 
         // LÓGICA DEL CONTADOR / TIMER DE CIERRE DE VELA[cite: 1, 2]
         function getIntervalSeconds(tf) {
