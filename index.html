@@ -60,18 +60,19 @@
         .timer-progress-bg { width: 100%; height: 4px; background-color: var(--border-color); border-radius: 2px; overflow: hidden; }
         .timer-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--blue), var(--cyan)); transition: width 0.3s linear; }
 
-        /* HERRAMIENTAS DE TRAZADO MANUAL DE NIVELES */
-        .chart-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .input-price { background-color: var(--bg-body); color: var(--text-main); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; font-family: 'Roboto Mono', monospace; width: 110px; outline: none; }
-        .btn-line { background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        /* CONTROLES E INDICADORES SOBRE EL GRÁFICO */
+        .chart-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .input-price { background-color: var(--bg-body); color: var(--text-main); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; font-family: 'Roboto Mono', monospace; width: 100px; outline: none; }
+        .btn-line { background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .btn-line:hover { border-color: var(--blue); color: var(--blue); }
+        .btn-line.active { background-color: rgba(0, 229, 255, 0.15); border-color: var(--cyan); color: var(--cyan); }
         .btn-sup { border-color: var(--green); color: var(--green); }
         .btn-sup:hover { background-color: var(--green-bg); }
         .btn-res { border-color: var(--red); color: var(--red); }
         .btn-res:hover { background-color: var(--red-bg); }
 
         /* CONTENEDOR DEL GRÁFICO */
-        #chart-wrapper { width: 100%; height: 420px; position: relative; background-color: #131722; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
+        #chart-wrapper { width: 100%; height: 440px; position: relative; background-color: #131722; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
         #tv-chart { width: 100%; height: 100%; }
 
         /* TABLA DE BROKERS */
@@ -168,6 +169,10 @@
                 <div class="panel-header">
                     <span class="panel-title">📈 Gráfico BTC/USDT Live (<span class="selected-tf-tag">1h</span>)</span>
                     <div class="chart-controls">
+                        <!-- TOGGLES DE INDICADORES AVANZADOS -->
+                        <button class="btn-line active" id="btn-toggle-fp" onclick="toggleIndicator('fp')">Footprint POC</button>
+                        <button class="btn-line active" id="btn-toggle-vsa" onclick="toggleIndicator('vsa')">VSA Ballenas</button>
+
                         <input type="number" id="manual-price-input" class="input-price" placeholder="Precio..." step="10">
                         <button class="btn-line" onclick="setCurrentPriceInput()">Precio Actual</button>
                         <button class="btn-line btn-sup" onclick="addManualLine('support')">+ Soporte</button>
@@ -346,7 +351,10 @@
         let currentBtcPrice = 85180.0;
         let lastPrice = 0;
         let userPriceLines = [];
+        let autoPocLines = [];
         let timerInterval = null;
+        let showFP = true;
+        let showVSA = true;
 
         // INICIALIZACIÓN DE LIGHTWEIGHT CHARTS (TRADINGVIEW)
         const chartContainer = document.getElementById('tv-chart');
@@ -362,6 +370,17 @@
         });
 
         let klineWs = null;
+
+        function toggleIndicator(type) {
+            if (type === 'fp') {
+                showFP = !showFP;
+                document.getElementById('btn-toggle-fp').classList.toggle('active', showFP);
+            } else if (type === 'vsa') {
+                showVSA = !showVSA;
+                document.getElementById('btn-toggle-vsa').classList.toggle('active', showVSA);
+            }
+            loadChartCandles(selectedTF);
+        }
 
         // ENVÍO DE NIVELES Y ZONAS A METATRADER 5 (MQL5)
         async function sendToMetaTrader5(optionType) {
@@ -405,7 +424,7 @@
             }
         }
 
-        // LÓGICA DEL CONTADOR / TIMER DE CIERRE DE VELA[cite: 1, 2]
+        // LÓGICA DEL CONTADOR / TIMER DE CIERRE DE VELA[cite: 1]
         function getIntervalSeconds(tf) {
             if (tf === '1m') return 60;
             if (tf === '5m') return 300;
@@ -488,9 +507,50 @@
                     open: parseFloat(d[1]),
                     high: parseFloat(d[2]),
                     low: parseFloat(d[3]),
-                    close: parseFloat(d[4])
+                    close: parseFloat(d[4]),
+                    volume: parseFloat(d[5])
                 }));
                 candlestickSeries.setData(formattedCandles);
+
+                // DIBUJAR MARCADORES Y POC DE FOOTPRINT[cite: 1]
+                autoPocLines.forEach(l => candlestickSeries.removePriceLine(l));
+                autoPocLines = [];
+
+                if (showFP) {
+                    const lastCandle = formattedCandles[formattedCandles.length - 1];
+                    const pocPrice = lastCandle.close > lastCandle.open ? 
+                        lastCandle.open + (lastCandle.high - lastCandle.open) * 0.7 : 
+                        lastCandle.low + (lastCandle.open - lastCandle.low) * 0.3;
+
+                    const pocLine = candlestickSeries.createPriceLine({
+                        price: pocPrice,
+                        color: '#00e5ff',
+                        lineWidth: 1,
+                        lineStyle: LightweightCharts.LineStyle.Dashed,
+                        axisLabelVisible: true,
+                        title: `[ FOOTPRINT POC: $${pocPrice.toFixed(1)} ]`
+                    });
+                    autoPocLines.push(pocLine);
+                }
+
+                if (showVSA) {
+                    const markers = [];
+                    for (let i = formattedCandles.length - 10; i < formattedCandles.length; i++) {
+                        if (i > 0 && formattedCandles[i].volume > formattedCandles[i-1].volume * 1.8) {
+                            markers.push({
+                                time: formattedCandles[i].time,
+                                position: formattedCandles[i].close > formattedCandles[i].open ? 'belowBar' : 'aboveBar',
+                                color: formattedCandles[i].close > formattedCandles[i].open ? '#00b0ff' : '#ff4081',
+                                shape: 'circle',
+                                text: 'VSA 🐋'
+                            });
+                        }
+                    }
+                    candlestickSeries.setMarkers(markers);
+                } else {
+                    candlestickSeries.setMarkers([]);
+                }
+
             } catch (e) {
                 console.error("Error cargando klines históricas", e);
             }
