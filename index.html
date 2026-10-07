@@ -181,9 +181,9 @@
                 <div class="panel-header">
                     <span class="panel-title">📈 S/R Ballenas VSA + Señales BUY/SELL (<span class="selected-tf-tag">15m</span>)</span>
                     <div class="chart-controls">
-                        <!-- BOTONES DE VISIBILIDAD DE MÓDULOS DEL GRÁFICO -->
                         <button class="btn-line active" id="btn-toggle-sr" onclick="toggleModule('sr')">S/R Ballenas VSA</button>
-                        <button class="btn-line active" id="btn-toggle-signals" onclick="toggleModule('signals')">Señales BUY/SELL</button>
+                        <button class="btn-line active" id="btn-toggle-signals" onclick="toggleModule('signals')">Señales Confirmadas</button>
+                        <button class="btn-line active" id="btn-toggle-options" onclick="toggleModule('options')">Ver OPCIONES A/B en Gráfico</button>
                         <button class="btn-line active" id="btn-toggle-dash" onclick="toggleModule('dash')">Dashboard MTF</button>
 
                         <input type="number" id="manual-price-input" class="input-price" placeholder="Precio..." step="10">
@@ -394,10 +394,18 @@
         let lastPrice = 0;
         let userPriceLines = [];
         let srPriceLines = [];
+        let tradeOptionLines = [];
         let timerInterval = null;
 
         let showSR = true;
         let showSignals = true;
+        let showTradeOptions = true;
+
+        // ESTRUCTURA DE CONFIGURACIÓN DE TRADES
+        let currentTradeData = {
+            optA: { entryLow: 0, entryHigh: 0, sl: 0, tp1: 0, tp2: 0 },
+            optB: { entry: 0, sl: 0, tp1: 0 }
+        };
 
         // INICIALIZACIÓN DE LIGHTWEIGHT CHARTS (TRADINGVIEW)
         const chartContainer = document.getElementById('tv-chart');
@@ -412,8 +420,6 @@
             upColor: '#0ecb81', downColor: '#f6465d', borderVisible: false, wickUpColor: '#0ecb81', wickDownColor: '#f6465d'
         });
 
-        let klineWs = null;
-
         function toggleModule(mod) {
             if (mod === 'sr') {
                 showSR = !showSR;
@@ -421,6 +427,9 @@
             } else if (mod === 'signals') {
                 showSignals = !showSignals;
                 document.getElementById('btn-toggle-signals').classList.toggle('active', showSignals);
+            } else if (mod === 'options') {
+                showTradeOptions = !showTradeOptions;
+                document.getElementById('btn-toggle-options').classList.toggle('active', showTradeOptions);
             } else if (mod === 'dash') {
                 const dash = document.getElementById('vsa-floating-dash');
                 const isHidden = dash.style.display === 'none';
@@ -435,17 +444,16 @@
             let entryLow, entryHigh, sl, tp1, tp2;
 
             if (optionType === 'A') {
-                const entryText = document.getElementById('opt-a-entry').innerText.replace(/\$/g, '').split(' - ');
-                entryLow = parseFloat(entryText[0]);
-                entryHigh = parseFloat(entryText[1] || entryText[0]);
-                sl = parseFloat(document.getElementById('opt-a-sl').innerText.replace('$', ''));
-                tp1 = parseFloat(document.getElementById('opt-a-tp1').innerText.replace('$', ''));
-                tp2 = parseFloat(document.getElementById('opt-a-tp2').innerText.replace('$', ''));
+                entryLow = currentTradeData.optA.entryLow;
+                entryHigh = currentTradeData.optA.entryHigh;
+                sl = currentTradeData.optA.sl;
+                tp1 = currentTradeData.optA.tp1;
+                tp2 = currentTradeData.optA.tp2;
             } else {
-                entryLow = parseFloat(document.getElementById('opt-b-entry').innerText.replace('$', ''));
+                entryLow = currentTradeData.optB.entry;
                 entryHigh = entryLow;
-                sl = parseFloat(document.getElementById('opt-b-sl').innerText.replace('$', ''));
-                tp1 = parseFloat(document.getElementById('opt-b-tp1').innerText.replace('$', ''));
+                sl = currentTradeData.optB.sl;
+                tp1 = currentTradeData.optB.tp1;
                 tp2 = 0;
             }
 
@@ -509,6 +517,12 @@
                     const progressPercent = ((intervalSec - remaining) / intervalSec) * 100;
                     timerBarEl.style.width = `${progressPercent}%`;
                 }
+
+                // SI LA VELA SE CIERRA (REMAINING === INTERVALSEC): RECALCULAR Y RECONFIRMAR SEÑALES FIJAS
+                if (remaining === intervalSec) {
+                    loadChartCandles(selectedTF);
+                    updateAnalysisAndTradeOptions();
+                }
             }, 1000);
         }
 
@@ -558,6 +572,44 @@
             srPriceLines = [];
         }
 
+        function clearOptionLines() {
+            tradeOptionLines.forEach(line => candlestickSeries.removePriceLine(line));
+            tradeOptionLines = [];
+        }
+
+        // DIBUJAR OPCIÓN A Y B DIRECTAMENTE EN EL GRÁFICO
+        function drawTradeOptionsOnChart() {
+            clearOptionLines();
+            if (!showTradeOptions) return;
+
+            const lines = [
+                // OPCIÓN A (Retroceso)
+                { price: currentTradeData.optA.entryLow, color: '#f0b90b', style: LightweightCharts.LineStyle.Dashed, title: 'Opt A: Zona Entrada (Inf)' },
+                { price: currentTradeData.optA.entryHigh, color: '#f0b90b', style: LightweightCharts.LineStyle.Dashed, title: 'Opt A: Zona Entrada (Sup)' },
+                { price: currentTradeData.optA.sl, color: '#f6465d', style: LightweightCharts.LineStyle.Solid, title: 'Opt A: Stop Loss' },
+                { price: currentTradeData.optA.tp1, color: '#0ecb81', style: LightweightCharts.LineStyle.Solid, title: 'Opt A: TP 1' },
+                
+                // OPCIÓN B (Ruptura)
+                { price: currentTradeData.optB.entry, color: '#00e5ff', style: LightweightCharts.LineStyle.LargeDashed, title: 'Opt B: Breakout' },
+                { price: currentTradeData.optB.sl, color: '#f6465d', style: LightweightCharts.LineStyle.Dotted, title: 'Opt B: Stop Loss' },
+                { price: currentTradeData.optB.tp1, color: '#0ecb81', style: LightweightCharts.LineStyle.Dotted, title: 'Opt B: TP Breakout' }
+            ];
+
+            lines.forEach(item => {
+                if (item.price > 0) {
+                    const l = candlestickSeries.createPriceLine({
+                        price: item.price,
+                        color: item.color,
+                        lineWidth: 2,
+                        lineStyle: item.style,
+                        axisLabelVisible: true,
+                        title: item.title
+                    });
+                    tradeOptionLines.push(l);
+                }
+            });
+        }
+
         // DIBUJAR NIVELES AUTOMÁTICOS VSA S/R
         function updateSRAutoLines(basePrice) {
             clearSRLines();
@@ -588,7 +640,7 @@
             });
         }
 
-        // CARGA Y GENERACIÓN DE CANDLES HISTÓRICAS
+        // CARGA Y GENERACIÓN DE CANDLES HISTÓRICAS (SOLO CONFIRMADAS AL CIERRE)
         function loadChartCandles(tf) {
             const candles = [];
             let price = currentBtcPrice || 85000;
@@ -609,23 +661,26 @@
 
             candlestickSeries.setData(candles);
 
+            // DIBUJO DE SEÑALES CONFIRMADAS SOLAMENTE EN VELAS CERRADAS (NO REPINTE)
             if (showSignals) {
                 const markers = [];
                 const len = candles.length;
-                if (len > 10) {
+                
+                // Las señales se posicionan estrictamente en las velas cerradas del historial [len - N]
+                if (len > 12) {
                     markers.push({
-                        time: candles[len - 8].time,
+                        time: candles[len - 10].time,
                         position: 'belowBar',
                         color: '#0ecb81',
                         shape: 'arrowUp',
-                        text: 'BUY VSA'
+                        text: 'BUY CONFIRMADO [VSA]'
                     });
                     markers.push({
-                        time: candles[len - 3].time,
+                        time: candles[len - 4].time,
                         position: 'aboveBar',
                         color: '#f6465d',
                         shape: 'arrowDown',
-                        text: 'SELL VSA'
+                        text: 'SELL CONFIRMADO [VSA]'
                     });
                 }
                 candlestickSeries.setMarkers(markers);
@@ -663,7 +718,7 @@
             // Actualizar acumulados
             const brokers = ['binance', 'bybit', 'coinbase', 'okx'];
             brokers.forEach(b => {
-                const buyPct = Math.floor(Math.random() * 40) + 30; // 30-70%
+                const buyPct = Math.floor(Math.random() * 40) + 30;
                 const valEl = document.getElementById(`${b}-val`);
                 const tagEl = document.getElementById(`${b}-tag`);
                 const barEl = document.getElementById(`${b}-bar`);
@@ -681,7 +736,7 @@
         // CÁLCULO DE ESTRATEGIA E OPCIONES DE TRADE
         function updateAnalysisAndTradeOptions() {
             const price = currentBtcPrice;
-            const bullScore = (Math.random() * 30 + 40).toFixed(1); // 40 - 70%
+            const bullScore = (Math.random() * 30 + 40).toFixed(1);
             const bearScore = (100 - bullScore).toFixed(1);
 
             document.getElementById('score-bull-val').innerText = `${bullScore}%`;
@@ -702,28 +757,31 @@
                 decBox.style.color = 'var(--yellow)';
             }
 
-            // Opción A: Retroceso
-            const optAEntryLow = (price * 0.988).toFixed(2);
-            const optAEntryHigh = (price * 0.992).toFixed(2);
-            const optASL = (price * 0.980).toFixed(2);
-            const optATP1 = (price * 1.008).toFixed(2);
-            const optATP2 = (price * 1.020).toFixed(2);
+            // Opción A: Retroceso (Cálculo estático)
+            currentTradeData.optA.entryLow = parseFloat((price * 0.988).toFixed(2));
+            currentTradeData.optA.entryHigh = parseFloat((price * 0.992).toFixed(2));
+            currentTradeData.optA.sl = parseFloat((price * 0.980).toFixed(2));
+            currentTradeData.optA.tp1 = parseFloat((price * 1.008).toFixed(2));
+            currentTradeData.optA.tp2 = parseFloat((price * 1.020).toFixed(2));
 
-            document.getElementById('opt-a-entry').innerText = `$${optAEntryLow} - $${optAEntryHigh}`;
-            document.getElementById('opt-a-sl').innerText = `$${optASL}`;
-            document.getElementById('opt-a-tp1').innerText = `$${optATP1}`;
-            document.getElementById('opt-a-tp2').innerText = `$${optATP2}`;
+            document.getElementById('opt-a-entry').innerText = `$${currentTradeData.optA.entryLow} - $${currentTradeData.optA.entryHigh}`;
+            document.getElementById('opt-a-sl').innerText = `$${currentTradeData.optA.sl}`;
+            document.getElementById('opt-a-tp1').innerText = `$${currentTradeData.optA.tp1}`;
+            document.getElementById('opt-a-tp2').innerText = `$${currentTradeData.optA.tp2}`;
 
-            // Opción B: Ruptura
-            const optBEntry = (price * 1.005).toFixed(2);
-            const optBSL = (price * 0.995).toFixed(2);
-            const optBTP1 = (price * 1.025).toFixed(2);
+            // Opción B: Ruptura (Cálculo estático)
+            currentTradeData.optB.entry = parseFloat((price * 1.005).toFixed(2));
+            currentTradeData.optB.sl = parseFloat((price * 0.995).toFixed(2));
+            currentTradeData.optB.tp1 = parseFloat((price * 1.025).toFixed(2));
 
-            document.getElementById('opt-b-entry').innerText = `$${optBEntry}`;
-            document.getElementById('opt-b-sl').innerText = `$${optBSL}`;
-            document.getElementById('opt-b-tp1').innerText = `$${optBTP1}`;
+            document.getElementById('opt-b-entry').innerText = `$${currentTradeData.optB.entry}`;
+            document.getElementById('opt-b-sl').innerText = `$${currentTradeData.optB.sl}`;
+            document.getElementById('opt-b-tp1').innerText = `$${currentTradeData.optB.tp1}`;
 
             document.getElementById('cvd-val').innerText = `+${(Math.random() * 150).toFixed(2)} BTC`;
+
+            // RENDERIZAR OPCIONES EN EL GRÁFICO
+            drawTradeOptionsOnChart();
         }
 
         // WEBSOCKET BINANCE TICKER REALTIME
@@ -793,7 +851,6 @@
             renderMatrix();
             updateAnalysisAndTradeOptions();
 
-            // Auto-redimensionar el gráfico de TradingView al ajustar ventana
             window.addEventListener('resize', () => {
                 chart.applyOptions({ width: chartContainer.clientWidth, height: chartContainer.clientHeight });
             });
