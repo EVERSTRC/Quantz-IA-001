@@ -424,7 +424,7 @@
 
     </main>
 
-    <!-- SCRIPT DE NAVEGACIÓN Y ALERTAS -->
+    <!-- SCRIPT DE NAVEGACIÓN, MARCADORES Y ALERTAS -->
     <script>
         const TIMEFRAMES = [
             { label: '1m', binance: '1m' },
@@ -439,6 +439,7 @@
         let currentBtcPrice = 85975.67;
         let lastPrice = 0;
         let userPriceLines = [];
+        let chartMarkers = []; // ARRAY PARA ALMACENAR LAS SEÑALES DEL GRÁFICO
         let timerInterval = null;
 
         let showSR = true;
@@ -470,7 +471,35 @@
         let candleWs = null;
         let tickerWs = null;
 
-        // 🔊 MOTOR DE AUDIO (WEB AUDIO API - SINTETIZADOR)
+        // 📍 FUNCIONES PARA DIBUJAR ALERTAS/SEÑALES DE COMPRA Y VENTA EN EL GRÁFICO
+        function addSignalMarker(type, price = currentBtcPrice, timestamp = null) {
+            const time = timestamp || Math.floor(Date.now() / 1000);
+            const isBuy = type === 'BUY';
+
+            const newMarker = {
+                time: time,
+                position: isBuy ? 'belowBar' : 'aboveBar',
+                color: isBuy ? '#0ecb81' : '#f6465d',
+                shape: isBuy ? 'arrowUp' : 'arrowDown',
+                text: `${type} @ $${Math.round(price)}`
+            };
+
+            chartMarkers.push(newMarker);
+            
+            // Ordenar marcadores por tiempo para evitar errores en Lightweight Charts
+            chartMarkers.sort((a, b) => a.time - b.time);
+
+            if (showSignals) {
+                candlestickSeries.setMarkers(chartMarkers);
+            }
+        }
+
+        function clearSignalMarkers() {
+            chartMarkers = [];
+            candlestickSeries.setMarkers([]);
+        }
+
+        // 🔊 MOTOR DE AUDIO (WEB AUDIO API)
         function playAudioBeep(type = 'buy') {
             const isAudioEnabled = document.getElementById('chk-audio').checked;
             if (!isAudioEnabled) return;
@@ -486,15 +515,13 @@
                 gain.connect(audioCtx.destination);
 
                 if (type === 'buy') {
-                    // Tono agudo y ascendente (Señal de Compra)
                     osc.type = 'sine';
-                    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3); // A5
+                    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3);
                 } else {
-                    // Tono grave y descendente (Señal de Venta)
                     osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
-                    osc.frequency.exponentialRampToValueAtTime(220, audioCtx.currentTime + 0.3); // A3
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(220, audioCtx.currentTime + 0.3);
                 }
 
                 gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
@@ -560,15 +587,17 @@
                       `🛑 <b>Stop Loss:</b> $${currentTradeData.optA.sl.toLocaleString()}\n` +
                       `🏁 <b>Take Profit 1:</b> $${currentTradeData.optA.tp1.toLocaleString()}\n` +
                       `🏁 <b>Take Profit 2:</b> $${currentTradeData.optA.tp2.toLocaleString()}`;
+                addSignalMarker('BUY', currentTradeData.optA.entryLow);
             } else {
                 msg = `🚨 <b>NUEVA SEÑAL OPCIÓN B (Ruptura)</b> 🚨\n` +
                       `📈 <b>Símbolo:</b> BTC/USDT (${selectedTF})\n` +
                       `🎯 <b>Entrada Ruptura:</b> $${currentTradeData.optB.entry.toLocaleString()}\n` +
                       `🛑 <b>Stop Loss:</b> $${currentTradeData.optB.sl.toLocaleString()}\n` +
                       `🏁 <b>Take Profit:</b> $${currentTradeData.optB.tp1.toLocaleString()}`;
+                addSignalMarker('SELL', currentTradeData.optB.entry);
             }
 
-            playAudioBeep('buy');
+            playAudioBeep(optionType === 'A' ? 'buy' : 'sell');
             sendTelegramMessage(msg);
         }
 
@@ -579,6 +608,13 @@
             } else if (mod === 'signals') {
                 showSignals = !showSignals;
                 document.getElementById('btn-toggle-signals').classList.toggle('active', showSignals);
+                
+                // Mostrar u ocultar señales del gráfico en vivo
+                if (showSignals) {
+                    candlestickSeries.setMarkers(chartMarkers);
+                } else {
+                    candlestickSeries.setMarkers([]);
+                }
             } else if (mod === 'options') {
                 showTradeOptions = !showTradeOptions;
                 document.getElementById('btn-toggle-options').classList.toggle('active', showTradeOptions);
@@ -599,12 +635,14 @@
                 sl = currentTradeData.optA.sl;
                 tp1 = currentTradeData.optA.tp1;
                 tp2 = currentTradeData.optA.tp2;
+                addSignalMarker('BUY', entryLow);
             } else {
                 entryLow = currentTradeData.optB.entry;
                 entryHigh = entryLow;
                 sl = currentTradeData.optB.sl;
                 tp1 = currentTradeData.optB.tp1;
                 tp2 = 0;
+                addSignalMarker('SELL', entryLow);
             }
 
             const payload = {
@@ -624,7 +662,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                playAudioBeep('buy');
+                playAudioBeep(optionType === 'A' ? 'buy' : 'sell');
                 alert('✅ Nivel y zonas enviadas exitosamente a MetaTrader 5.');
             } catch (e) {
                 alert('⚠️ Conexión lista: Asegúrate de tener ejecutando el script/bridge local de MT5 en el puerto 8080.');
@@ -677,6 +715,7 @@
                 el.innerText = selectedTF;
             });
 
+            clearSignalMarkers();
             startCandleTimer(selectedTF);
             connectBinanceCandleWS(selectedTF);
             loadHistoricalData(selectedTF);
@@ -761,6 +800,13 @@
                 if (candles.length > 0) {
                     const lastCandle = candles[candles.length - 1];
                     updateTickerUI(lastCandle.close);
+
+                    // Generar un par de marcadores VSA de prueba sobre velas pasadas
+                    const sampleIndex1 = Math.max(0, candles.length - 40);
+                    const sampleIndex2 = Math.max(0, candles.length - 10);
+                    
+                    addSignalMarker('BUY', candles[sampleIndex1].low, candles[sampleIndex1].time);
+                    addSignalMarker('SELL', candles[sampleIndex2].high, candles[sampleIndex2].time);
                 }
             } catch (e) {
                 console.error("Error al cargar datos históricos de Binance:", e);
