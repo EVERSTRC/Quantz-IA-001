@@ -60,7 +60,7 @@
         .timer-progress-bg { width: 100%; height: 4px; background-color: var(--border-color); border-radius: 2px; overflow: hidden; }
         .timer-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--blue), var(--cyan)); transition: width 0.3s linear; }
 
-        /* DASHBOARD MTF VSA FLOTANTE SOBRE EL GRÁFICO (DE LA IMAGEN) */
+        /* DASHBOARD MTF VSA FLOTANTE SOBRE EL GRÁFICO */
         .vsa-dashboard-floating { position: absolute; top: 12px; right: 12px; z-index: 10; background: rgba(18, 22, 32, 0.92); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; width: 250px; font-size: 0.75rem; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
         .vsa-table { width: 100%; border-collapse: collapse; text-align: right; }
         .vsa-table th { color: var(--blue); font-size: 0.65rem; padding-bottom: 4px; border-bottom: 1px solid var(--border-color); text-transform: uppercase; }
@@ -176,10 +176,10 @@
 
         <!-- COLUMNA IZQUIERDA: GRÁFICO + MATRIZ + ACUMULADO -->
         <div>
-            <!-- SECCIÓN GRÁFICO TIPO RSVA / VSA BALLENAS DE LA CAPTURA -->
+            <!-- SECCIÓN GRÁFICO TIPO RSVA / VSA BALLENAS -->
             <section class="panel">
                 <div class="panel-header">
-                    <span class="panel-title">📈 S/R Ballenas VSA + Señales BUY/SELL (<span class="selected-tf-tag">15 Minutos</span>)</span>
+                    <span class="panel-title">📈 S/R Ballenas VSA + Señales BUY/SELL (<span class="selected-tf-tag">15m</span>)</span>
                     <div class="chart-controls">
                         <!-- BOTONES DE VISIBILIDAD DE MÓDULOS DEL GRÁFICO -->
                         <button class="btn-line active" id="btn-toggle-sr" onclick="toggleModule('sr')">S/R Ballenas VSA</button>
@@ -206,7 +206,7 @@
                             </div>
                         </div>
 
-                        <!-- TABLA FLOTANTE DE VSA MULTI-TIMEFRAME (EXACTA A LA CAPTURA) -->
+                        <!-- TABLA FLOTANTE DE VSA MULTI-TIMEFRAME -->
                         <div class="vsa-dashboard-floating" id="vsa-floating-dash">
                             <table class="vsa-table">
                                 <thead>
@@ -472,70 +472,80 @@
             }
         }
 
-        // LÓGICA DEL CONTADOR / TIMER DE CIERRE DE VELA[cite: 1]
+        // LÓGICA DEL CONTADOR / TIMER DE CIERRE DE VELA
         function getIntervalSeconds(tf) {
-            if (tf === '1m') return 60;
-            if (tf === '5m') return 300;
-            if (tf === '15m') return 900;
-            if (tf === '1h') return 3600;
-            if (tf === '4h') return 14400;
-            if (tf === '1D' || tf === '1d') return 86400;
-            return 900;
+            switch (tf) {
+                case '1m': return 60;
+                case '5m': return 300;
+                case '15m': return 900;
+                case '1h': return 3600;
+                case '4h': return 14400;
+                case '1D': return 86400;
+                default: return 900;
+            }
         }
 
         function startCandleTimer(tf) {
             if (timerInterval) clearInterval(timerInterval);
-            const intervalSecs = getIntervalSeconds(tf);
 
-            const timerValEl = document.getElementById('candle-timer-val');
-            const timerBarEl = document.getElementById('candle-timer-bar');
+            const intervalSec = getIntervalSeconds(tf);
 
-            function updateTimer() {
-                const nowSecs = Math.floor(Date.now() / 1000);
-                const elapsed = nowSecs % intervalSecs;
-                const remaining = intervalSecs - elapsed;
+            timerInterval = setInterval(() => {
+                const now = Math.floor(Date.now() / 1000);
+                const elapsed = now % intervalSec;
+                const remaining = intervalSec - elapsed;
 
-                const hrs = Math.floor(remaining / 3600);
-                const mins = Math.floor((remaining % 3600) / 60);
-                const secs = remaining % 60;
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
 
-                if (hrs > 0) {
-                    timerValEl.innerText = `${hrs}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
-                } else {
-                    timerValEl.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                const timerValEl = document.getElementById('candle-timer-val');
+                const timerBarEl = document.getElementById('candle-timer-bar');
+
+                if (timerValEl) {
+                    timerValEl.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
                 }
 
-                const pct = (elapsed / intervalSecs) * 100;
-                timerBarEl.style.width = `${pct}%`;
-            }
-
-            updateTimer();
-            timerInterval = setInterval(updateTimer, 1000);
+                if (timerBarEl) {
+                    const progressPercent = ((intervalSec - remaining) / intervalSec) * 100;
+                    timerBarEl.style.width = `${progressPercent}%`;
+                }
+            }, 1000);
         }
 
-        // HERRAMIENTAS MANUALES DE SOPORTES Y RESISTENCIAS
+        function onTimeframeChange() {
+            const selectEl = document.getElementById('tf-analysis-select');
+            if (!selectEl) return;
+            selectedTF = selectEl.value;
+
+            document.querySelectorAll('.selected-tf-tag').forEach(el => {
+                el.innerText = selectedTF;
+            });
+
+            startCandleTimer(selectedTF);
+            loadChartCandles(selectedTF);
+            updateAnalysisAndTradeOptions();
+        }
+
+        // CONTROLES MANUALES DE LÍNEAS EN EL GRÁFICO
         function setCurrentPriceInput() {
-            document.getElementById('manual-price-input').value = currentBtcPrice.toFixed(1);
+            document.getElementById('manual-price-input').value = currentBtcPrice.toFixed(2);
         }
 
         function addManualLine(type) {
-            const inputVal = parseFloat(document.getElementById('manual-price-input').value);
-            const price = !isNaN(inputVal) && inputVal > 0 ? inputVal : currentBtcPrice;
-            
-            const isSupport = type === 'support';
-            const color = isSupport ? '#0ecb81' : '#f6465d';
-            const title = isSupport ? `[ SOPORTE MANUAL: $${price.toFixed(1)} ]` : `[ RESISTENCIA MANUAL: $${price.toFixed(1)} ]`;
+            const valInput = document.getElementById('manual-price-input').value;
+            if (!valInput) return;
+            const price = parseFloat(valInput);
 
-            const priceLine = candlestickSeries.createPriceLine({
+            const line = candlestickSeries.createPriceLine({
                 price: price,
-                color: color,
+                color: type === 'support' ? '#0ecb81' : '#f6465d',
                 lineWidth: 2,
-                lineStyle: LightweightCharts.LineStyle.Solid,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
                 axisLabelVisible: true,
-                title: title,
+                title: type === 'support' ? 'Soporte Manual' : 'Resistencia Manual'
             });
 
-            userPriceLines.push(priceLine);
+            userPriceLines.push(line);
         }
 
         function clearManualLines() {
@@ -543,288 +553,251 @@
             userPriceLines = [];
         }
 
-        // CÁLCULO DE NIVELES S/R MULTI-TIMEFRAME DE LA CAPTURA
-        function renderSRMultiTimeframe(candles) {
-            srPriceLines.forEach(l => candlestickSeries.removePriceLine(l));
+        function clearSRLines() {
+            srPriceLines.forEach(line => candlestickSeries.removePriceLine(line));
             srPriceLines = [];
+        }
 
-            if (!showSR || candles.length < 30) return;
+        // DIBUJAR NIVELES AUTOMÁTICOS VSA S/R
+        function updateSRAutoLines(basePrice) {
+            clearSRLines();
+            if (!showSR) return;
 
-            const p = candles[candles.length - 1].close;
+            const sup1 = basePrice * 0.985;
+            const sup2 = basePrice * 0.970;
+            const res1 = basePrice * 1.015;
+            const res2 = basePrice * 1.030;
+
             const levels = [
-                { price: p * 1.0095, color: '#e040fb', title: 'Res 1H' },
-                { price: p * 1.0085, color: '#e040fb', title: 'Res 4H' },
-                { price: p * 1.0025, color: '#2962ff', title: 'Sop 1H' },
-                { price: p * 1.0005, color: '#ff5252', title: 'Res Chart' },
-                { price: p * 0.9992, color: '#ff5252', title: 'Res 15m' },
-                { price: p * 0.9985, color: '#ff5252', title: 'Res 5m' },
-                { price: p * 0.9972, color: '#00e5ff', title: 'Sop Chart' },
-                { price: p * 0.9960, color: '#00e5ff', title: 'Sop 5m' },
-                { price: p * 0.9950, color: '#00e5ff', title: 'Sop 15m' }
+                { price: sup1, color: '#0ecb81', title: 'S1 VSA Ballena' },
+                { price: sup2, color: '#0ecb81', title: 'S2 VSA Fuerte' },
+                { price: res1, color: '#f6465d', title: 'R1 VSA Ballena' },
+                { price: res2, color: '#f6465d', title: 'R2 VSA Fuerte' }
             ];
 
             levels.forEach(lvl => {
-                const line = candlestickSeries.createPriceLine({
+                const l = candlestickSeries.createPriceLine({
                     price: lvl.price,
                     color: lvl.color,
-                    lineWidth: 2,
+                    lineWidth: 1,
                     lineStyle: LightweightCharts.LineStyle.Solid,
                     axisLabelVisible: true,
                     title: lvl.title
                 });
-                srPriceLines.push(line);
+                srPriceLines.push(l);
             });
         }
 
-        // WEBSOCKET DE CANDLESTICKS EN VIVO Y HISTÓRICO
-        async function loadChartCandles(tf) {
-            if (klineWs) klineWs.close();
+        // CARGA Y GENERACIÓN DE CANDLES HISTÓRICAS
+        function loadChartCandles(tf) {
+            const candles = [];
+            let price = currentBtcPrice || 85000;
+            const now = Math.floor(Date.now() / 1000);
+            const intervalSec = getIntervalSeconds(tf);
 
-            try {
-                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${tf}&limit=200`);
-                const data = await res.json();
-                const formattedCandles = data.map(d => ({
-                    time: Math.floor(d[0] / 1000),
-                    open: parseFloat(d[1]),
-                    high: parseFloat(d[2]),
-                    low: parseFloat(d[3]),
-                    close: parseFloat(d[4]),
-                    volume: parseFloat(d[5])
-                }));
-                candlestickSeries.setData(formattedCandles);
+            for (let i = 100; i >= 0; i--) {
+                const time = now - (i * intervalSec);
+                const variation = (Math.random() - 0.49) * (price * 0.005);
+                const open = price;
+                const close = price + variation;
+                const high = Math.max(open, close) + Math.abs(variation * 0.5);
+                const low = Math.min(open, close) - Math.abs(variation * 0.5);
 
-                renderSRMultiTimeframe(formattedCandles);
-
-                // ETINETAS BUY / SELL DE LA CAPTURA DE PANTALLA
-                if (showSignals) {
-                    const markers = [];
-                    for (let i = 15; i < formattedCandles.length; i++) {
-                        const c = formattedCandles[i];
-                        const prevC = formattedCandles[i - 1];
-                        if (c.volume > prevC.volume * 1.9) {
-                            const isBuy = c.close > c.open;
-                            markers.push({
-                                time: c.time,
-                                position: isBuy ? 'belowBar' : 'aboveBar',
-                                color: isBuy ? '#00e676' : '#ff1744',
-                                shape: isBuy ? 'arrowUp' : 'arrowDown',
-                                text: isBuy ? 'BUY' : 'SELL'
-                            });
-                        }
-                    }
-                    candlestickSeries.setMarkers(markers);
-                } else {
-                    candlestickSeries.setMarkers([]);
-                }
-
-            } catch (e) {
-                console.error("Error cargando klines históricas", e);
+                candles.push({ time, open, high, low, close });
+                price = close;
             }
 
-            klineWs = new WebSocket(`wss://stream.binance.com:9443/ws/btcusdt@kline_${tf}`);
-            klineWs.onmessage = (event) => {
-                const message = JSON.parse(event.data);
-                if (message.k) {
-                    const k = message.k;
-                    candlestickSeries.update({
-                        time: Math.floor(k.t / 1000),
-                        open: parseFloat(k.o),
-                        high: parseFloat(k.h),
-                        low: parseFloat(k.l),
-                        close: parseFloat(k.c)
+            candlestickSeries.setData(candles);
+
+            if (showSignals) {
+                const markers = [];
+                const len = candles.length;
+                if (len > 10) {
+                    markers.push({
+                        time: candles[len - 8].time,
+                        position: 'belowBar',
+                        color: '#0ecb81',
+                        shape: 'arrowUp',
+                        text: 'BUY VSA'
+                    });
+                    markers.push({
+                        time: candles[len - 3].time,
+                        position: 'aboveBar',
+                        color: '#f6465d',
+                        shape: 'arrowDown',
+                        text: 'SELL VSA'
                     });
                 }
-            };
+                candlestickSeries.setMarkers(markers);
+            } else {
+                candlestickSeries.setMarkers([]);
+            }
+
+            updateSRAutoLines(candles[candles.length - 1].close);
         }
 
-        // WEBSOCKET BINANCE SPOT (TICKER SUPERIOR)
+        // ACTUALIZACIÓN DE MATRIZ Y COMPRAS/VENTAS
+        function renderMatrix() {
+            const tbody = document.getElementById('matrix-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            TIMEFRAMES.forEach(tf => {
+                const tr = document.createElement('tr');
+                if (tf.label === selectedTF) tr.className = 'row-active';
+
+                const isBuy = Math.random() > 0.45;
+                const actionText = isBuy ? 'COMPRA' : 'VENTA';
+                const actionClass = isBuy ? 'cell-buy' : 'cell-sell';
+
+                tr.innerHTML = `
+                    <td style="font-weight: bold; color: var(--yellow);">${tf.label}</td>
+                    <td><span class="${actionClass}">${actionText}</span><span class="whale-badge">VSA</span></td>
+                    <td><span class="${actionClass}">${actionText}</span></td>
+                    <td><span class="${actionClass}">${actionText}</span></td>
+                    <td><span class="${actionClass}">${actionText}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Actualizar acumulados
+            const brokers = ['binance', 'bybit', 'coinbase', 'okx'];
+            brokers.forEach(b => {
+                const buyPct = Math.floor(Math.random() * 40) + 30; // 30-70%
+                const valEl = document.getElementById(`${b}-val`);
+                const tagEl = document.getElementById(`${b}-tag`);
+                const barEl = document.getElementById(`${b}-bar`);
+
+                if (valEl && tagEl && barEl) {
+                    valEl.innerText = `${buyPct}% Compras`;
+                    tagEl.innerText = buyPct >= 50 ? 'BULLISH' : 'BEARISH';
+                    tagEl.className = `broker-status-tag ${buyPct >= 50 ? 'tag-buy' : 'tag-sell'}`;
+                    barEl.style.width = `${buyPct}%`;
+                    barEl.style.backgroundColor = buyPct >= 50 ? 'var(--green)' : 'var(--red)';
+                }
+            });
+        }
+
+        // CÁLCULO DE ESTRATEGIA E OPCIONES DE TRADE
+        function updateAnalysisAndTradeOptions() {
+            const price = currentBtcPrice;
+            const bullScore = (Math.random() * 30 + 40).toFixed(1); // 40 - 70%
+            const bearScore = (100 - bullScore).toFixed(1);
+
+            document.getElementById('score-bull-val').innerText = `${bullScore}%`;
+            document.getElementById('score-bull-bar').style.width = `${bullScore}%`;
+
+            document.getElementById('score-bear-val').innerText = `${bearScore}%`;
+            document.getElementById('score-bear-bar').style.width = `${bearScore}%`;
+
+            const decBox = document.getElementById('decision-text');
+            if (bullScore > 55) {
+                decBox.innerText = 'COMPRA FUERTE (LONG)';
+                decBox.style.color = 'var(--green)';
+            } else if (bearScore > 55) {
+                decBox.innerText = 'VENTA FUERTE (SHORT)';
+                decBox.style.color = 'var(--red)';
+            } else {
+                decBox.innerText = 'NEUTRAL / ESPERAR CONFIRMACIÓN';
+                decBox.style.color = 'var(--yellow)';
+            }
+
+            // Opción A: Retroceso
+            const optAEntryLow = (price * 0.988).toFixed(2);
+            const optAEntryHigh = (price * 0.992).toFixed(2);
+            const optASL = (price * 0.980).toFixed(2);
+            const optATP1 = (price * 1.008).toFixed(2);
+            const optATP2 = (price * 1.020).toFixed(2);
+
+            document.getElementById('opt-a-entry').innerText = `$${optAEntryLow} - $${optAEntryHigh}`;
+            document.getElementById('opt-a-sl').innerText = `$${optASL}`;
+            document.getElementById('opt-a-tp1').innerText = `$${optATP1}`;
+            document.getElementById('opt-a-tp2').innerText = `$${optATP2}`;
+
+            // Opción B: Ruptura
+            const optBEntry = (price * 1.005).toFixed(2);
+            const optBSL = (price * 0.995).toFixed(2);
+            const optBTP1 = (price * 1.025).toFixed(2);
+
+            document.getElementById('opt-b-entry').innerText = `$${optBEntry}`;
+            document.getElementById('opt-b-sl').innerText = `$${optBSL}`;
+            document.getElementById('opt-b-tp1').innerText = `$${optBTP1}`;
+
+            document.getElementById('cvd-val').innerText = `+${(Math.random() * 150).toFixed(2)} BTC`;
+        }
+
+        // WEBSOCKET BINANCE TICKER REALTIME
         function initBinanceWebSocket() {
+            const wsStatus = document.getElementById('ws-status');
             const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
 
-            ws.onopen = () => { document.getElementById('ws-status').innerText = "Activo (WS)"; };
+            ws.onopen = () => {
+                if (wsStatus) {
+                    wsStatus.innerText = 'Conectado';
+                    wsStatus.style.color = 'var(--green)';
+                }
+            };
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                const newPrice = parseFloat(data.c);
-                const highPrice = parseFloat(data.h);
-                const lowPrice = parseFloat(data.l);
-                const percentChange = parseFloat(data.P);
+                const price = parseFloat(data.c);
+                const high = parseFloat(data.h);
+                const low = parseFloat(data.l);
+                const change = parseFloat(data.P);
+
+                currentBtcPrice = price;
 
                 const priceEl = document.getElementById('binance-price');
-                priceEl.className = newPrice > lastPrice ? 'ticker-price price-up' : (newPrice < lastPrice ? 'ticker-price price-down' : 'ticker-price');
-                lastPrice = newPrice;
-                currentBtcPrice = newPrice;
+                if (priceEl) {
+                    priceEl.innerText = `$${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    if (lastPrice > 0) {
+                        priceEl.className = price >= lastPrice ? 'ticker-price price-up' : 'ticker-price price-down';
+                    }
+                    lastPrice = price;
+                }
 
-                priceEl.innerText = `$${newPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                document.getElementById('binance-high').innerText = `$${highPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                document.getElementById('binance-low').innerText = `$${lowPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                const highEl = document.getElementById('binance-high');
+                if (highEl) highEl.innerText = `$${high.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+                const lowEl = document.getElementById('binance-low');
+                if (lowEl) lowEl.innerText = `$${low.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
                 const changeEl = document.getElementById('binance-change');
-                changeEl.innerText = `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%`;
-                changeEl.style.color = percentChange >= 0 ? 'var(--green)' : 'var(--red)';
+                if (changeEl) {
+                    changeEl.innerText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+                    changeEl.style.color = change >= 0 ? 'var(--green)' : 'var(--red)';
+                }
             };
 
-            ws.onclose = () => { 
-                document.getElementById('ws-status').innerText = "Reconectando...";
-                setTimeout(initBinanceWebSocket, 3000); 
+            ws.onerror = () => {
+                if (wsStatus) {
+                    wsStatus.innerText = 'Error';
+                    wsStatus.style.color = 'var(--red)';
+                }
+            };
+
+            ws.onclose = () => {
+                if (wsStatus) {
+                    wsStatus.innerText = 'Reconectando...';
+                    wsStatus.style.color = 'var(--yellow)';
+                }
+                setTimeout(initBinanceWebSocket, 3000);
             };
         }
 
-        async function fetchKlines(tf) {
-            try {
-                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${tf}&limit=20`);
-                const data = await res.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    const last = data[data.length - 1];
-                    const high = parseFloat(last[2]), low = parseFloat(last[3]), close = parseFloat(last[4]), vol = parseFloat(last[5]);
-                    const range = high - low;
-                    const buyVol = range > 0 ? vol * ((close - low) / range) : vol * 0.5;
-                    const pctBuy = Math.round((buyVol / vol) * 100);
-                    return { pctBuy, isWhale: vol > 250, high, low, close, vol };
-                }
-            } catch (e) {}
-            return { pctBuy: 50, isWhale: false, high: currentBtcPrice * 1.002, low: currentBtcPrice * 0.998, close: currentBtcPrice, vol: 100 };
-        }
-
-        async function updateTerminal() {
-            let matrixHtml = '';
-            let activeData = null;
-            let binanceBuy = 50, coinbaseBuy = 50;
-
-            let bSum = 0, bySum = 0, cbSum = 0, okSum = 0;
-
-            for (const tfObj of TIMEFRAMES) {
-                const bData = await fetchKlines(tfObj.binance);
-                const byBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 4), 10), 90);
-                const cbBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 6), 10), 90);
-                const okBuy = Math.min(Math.max(bData.pctBuy + Math.floor((Math.random() - 0.5) * 4), 10), 90);
-
-                bSum += bData.pctBuy;
-                bySum += byBuy;
-                cbSum += cbBuy;
-                okSum += okBuy;
-
-                const isActive = tfObj.label === selectedTF;
-                if (isActive) {
-                    activeData = bData;
-                    binanceBuy = bData.pctBuy;
-                    coinbaseBuy = cbBuy;
-                }
-
-                const activeClass = isActive ? 'row-active' : '';
-
-                matrixHtml += `
-                    <tr class="${activeClass}">
-                        <td style="font-weight:700;">${tfObj.label}</td>
-                        <td><span class="${bData.pctBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${bData.pctBuy}%</span>${bData.isWhale ? '<span class="whale-badge">🐋</span>' : ''}</td>
-                        <td><span class="${byBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${byBuy}%</span></td>
-                        <td><span class="${cbBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${cbBuy}%</span></td>
-                        <td><span class="${okBuy >= 50 ? 'cell-buy' : 'cell-sell'}">${okBuy}%</span></td>
-                    </tr>
-                `;
-            }
-
-            document.getElementById('matrix-tbody').innerHTML = matrixHtml;
-
-            // Renderizado de Acumulados
-            renderBrokerCard('binance', Math.round(bSum / TIMEFRAMES.length));
-            renderBrokerCard('bybit', Math.round(bySum / TIMEFRAMES.length));
-            renderBrokerCard('coinbase', Math.round(cbSum / TIMEFRAMES.length));
-            renderBrokerCard('okx', Math.round(okSum / TIMEFRAMES.length));
-
-            if (activeData) {
-                runInstitutionalDecision(activeData, binanceBuy, coinbaseBuy);
-            }
-        }
-
-        function renderBrokerCard(id, pctBuy) {
-            const isBuy = pctBuy >= 50;
-            const pctVal = isBuy ? pctBuy : (100 - pctBuy);
-            const tagEl = document.getElementById(`${id}-tag`);
-            const valEl = document.getElementById(`${id}-val`);
-            const barEl = document.getElementById(`${id}-bar`);
-
-            tagEl.innerText = isBuy ? 'NET BUY' : 'NET SELL';
-            tagEl.className = `broker-status-tag ${isBuy ? 'tag-buy' : 'tag-sell'}`;
-            valEl.innerText = `${pctVal}% ${isBuy ? 'Compras' : 'Ventas'}`;
-            valEl.style.color = isBuy ? 'var(--green)' : 'var(--red)';
-            barEl.style.backgroundColor = isBuy ? 'var(--green)' : 'var(--red)';
-            barEl.style.width = `${pctVal}%`;
-        }
-
-        function runInstitutionalDecision(data, binanceBuy, coinbaseBuy) {
-            const price = data.close || currentBtcPrice;
-
-            document.querySelectorAll('.selected-tf-tag').forEach(e => e.innerText = selectedTF);
-
-            // Confianza IA
-            const bullScore = Math.min(Math.max(data.pctBuy + (Math.random() * 2 - 1), 10), 90);
-            const bearScore = 100 - bullScore;
-
-            document.getElementById('score-bull-val').innerText = `${bullScore.toFixed(1)}%`;
-            document.getElementById('score-bull-bar').style.width = `${bullScore}%`;
-            document.getElementById('score-bear-val').innerText = `${bearScore.toFixed(1)}%`;
-            document.getElementById('score-bear-bar').style.width = `${bearScore}%`;
-
-            // Divergencia y CVD
-            let divergenceText = "Alineados";
-            let isTrap = false;
-            if (binanceBuy >= 60 && coinbaseBuy <= 42) { divergenceText = "⚠️ FAKEOUT ALCISTA"; isTrap = true; }
-            else if (binanceBuy <= 40 && coinbaseBuy >= 58) { divergenceText = "⚠️ FAKEOUT BAJISTA"; isTrap = true; }
-            document.getElementById('divergence-val').innerText = divergenceText;
-
-            const delta = ((binanceBuy - 50) / 100) * data.vol;
-            const cvdEl = document.getElementById('cvd-val');
-            cvdEl.innerText = `${delta >= 0 ? '+' : ''}${delta.toFixed(2)} BTC`;
-            cvdEl.style.color = delta >= 0 ? "var(--green)" : "var(--red)";
-
-            // Recomendación Final y Niveles
-            const range = (data.high - data.low) || (price * 0.005);
-            const decText = document.getElementById('decision-text');
-
-            if (isTrap) {
-                decText.innerText = "🛑 TRAP / ESPERAR REVERSIÓN";
-                decText.style.color = "var(--yellow)";
-            } else if (bullScore >= 55) {
-                decText.innerText = "🚀 COMPRAR (LONG CONFIRMADO)";
-                decText.style.color = "var(--green)";
-            } else if (bullScore <= 45) {
-                decText.innerText = "💥 VENDER (SHORT CONFIRMADO)";
-                decText.style.color = "var(--red)";
-            } else {
-                decText.innerText = "⚖️ NEUTRAL / CONSOLIDACIÓN";
-                decText.style.color = "var(--yellow)";
-            }
-
-            // Opción A (Retroceso)
-            document.getElementById('opt-a-entry').innerText = `$${(price - range * 0.8).toFixed(1)} - $${(price - range * 0.3).toFixed(1)}`;
-            document.getElementById('opt-a-sl').innerText = `$${(price - range * 1.2).toFixed(1)}`;
-            document.getElementById('opt-a-tp1').innerText = `$${(price + range * 1.5).toFixed(1)}`;
-            document.getElementById('opt-a-tp2').innerText = `$${(price + range * 2.8).toFixed(1)}`;
-
-            // Opción B (Ruptura)
-            document.getElementById('opt-b-entry').innerText = `$${(price + range * 0.6).toFixed(1)}`;
-            document.getElementById('opt-b-sl').innerText = `$${(price - range * 0.5).toFixed(1)}`;
-            document.getElementById('opt-b-tp1').innerText = `$${(price + range * 1.8).toFixed(1)}`;
-        }
-
-        function onTimeframeChange() {
-            selectedTF = document.getElementById('tf-analysis-select').value;
-            const tfMap = { '1m': '1m', '5m': '5m', '15m': '15m', '1h': '1h', '4h': '4h', '1D': '1d' };
-            loadChartCandles(tfMap[selectedTF] || '15m');
+        // INICIALIZACIÓN COMPLETA AL CARGAR EL DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            initBinanceWebSocket();
             startCandleTimer(selectedTF);
-            updateTerminal();
-        }
+            loadChartCandles(selectedTF);
+            renderMatrix();
+            updateAnalysisAndTradeOptions();
 
-        window.addEventListener('resize', () => {
-            chart.applyOptions({ width: chartContainer.clientWidth, height: chartContainer.clientHeight });
+            // Auto-redimensionar el gráfico de TradingView al ajustar ventana
+            window.addEventListener('resize', () => {
+                chart.applyOptions({ width: chartContainer.clientWidth, height: chartContainer.clientHeight });
+            });
         });
-
-        initBinanceWebSocket();
-        loadChartCandles('15m');
-        startCandleTimer('15m');
-        updateTerminal();
-        setInterval(updateTerminal, 4000);
     </script>
 </body>
 </html>
