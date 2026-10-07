@@ -401,13 +401,12 @@
         let showSignals = true;
         let showTradeOptions = true;
 
-        // ESTRUCTURA DE CONFIGURACIÓN DE TRADES
         let currentTradeData = {
             optA: { entryLow: 0, entryHigh: 0, sl: 0, tp1: 0, tp2: 0 },
             optB: { entry: 0, sl: 0, tp1: 0 }
         };
 
-        // INICIALIZACIÓN DE LIGHTWEIGHT CHARTS (TRADINGVIEW)
+        // INICIALIZACIÓN DE LIGHTWEIGHT CHARTS
         const chartContainer = document.getElementById('tv-chart');
         const chart = LightweightCharts.createChart(chartContainer, {
             layout: { background: { type: 'solid', color: '#0b0e14' }, textColor: '#d1d4dc' },
@@ -419,6 +418,10 @@
         const candlestickSeries = chart.addCandlestickSeries({
             upColor: '#0ecb81', downColor: '#f6465d', borderVisible: false, wickUpColor: '#0ecb81', wickDownColor: '#f6465d'
         });
+
+        let candleWs = null;
+        let activeCandleData = null;
+        let chartHistoricalCandles = [];
 
         function toggleModule(mod) {
             if (mod === 'sr') {
@@ -439,7 +442,6 @@
             loadChartCandles(selectedTF);
         }
 
-        // ENVÍO DE NIVELES Y ZONAS A METATRADER 5 (MQL5)
         async function sendToMetaTrader5(optionType) {
             let entryLow, entryHigh, sl, tp1, tp2;
 
@@ -480,7 +482,6 @@
             }
         }
 
-        // LÓGICA DEL CONTADOR / TIMER DE CIERRE DE VELA
         function getIntervalSeconds(tf) {
             switch (tf) {
                 case '1m': return 60;
@@ -517,12 +518,6 @@
                     const progressPercent = ((intervalSec - remaining) / intervalSec) * 100;
                     timerBarEl.style.width = `${progressPercent}%`;
                 }
-
-                // SI LA VELA SE CIERRA (REMAINING === INTERVALSEC): RECALCULAR Y RECONFIRMAR SEÑALES FIJAS
-                if (remaining === intervalSec) {
-                    loadChartCandles(selectedTF);
-                    updateAnalysisAndTradeOptions();
-                }
             }, 1000);
         }
 
@@ -537,10 +532,9 @@
 
             startCandleTimer(selectedTF);
             loadChartCandles(selectedTF);
-            updateAnalysisAndTradeOptions();
+            initCandleWebSocket(selectedTF);
         }
 
-        // CONTROLES MANUALES DE LÍNEAS EN EL GRÁFICO
         function setCurrentPriceInput() {
             document.getElementById('manual-price-input').value = currentBtcPrice.toFixed(2);
         }
@@ -577,19 +571,15 @@
             tradeOptionLines = [];
         }
 
-        // DIBUJAR OPCIÓN A Y B DIRECTAMENTE EN EL GRÁFICO
         function drawTradeOptionsOnChart() {
             clearOptionLines();
             if (!showTradeOptions) return;
 
             const lines = [
-                // OPCIÓN A (Retroceso)
                 { price: currentTradeData.optA.entryLow, color: '#f0b90b', style: LightweightCharts.LineStyle.Dashed, title: 'Opt A: Zona Entrada (Inf)' },
                 { price: currentTradeData.optA.entryHigh, color: '#f0b90b', style: LightweightCharts.LineStyle.Dashed, title: 'Opt A: Zona Entrada (Sup)' },
                 { price: currentTradeData.optA.sl, color: '#f6465d', style: LightweightCharts.LineStyle.Solid, title: 'Opt A: Stop Loss' },
                 { price: currentTradeData.optA.tp1, color: '#0ecb81', style: LightweightCharts.LineStyle.Solid, title: 'Opt A: TP 1' },
-                
-                // OPCIÓN B (Ruptura)
                 { price: currentTradeData.optB.entry, color: '#00e5ff', style: LightweightCharts.LineStyle.LargeDashed, title: 'Opt B: Breakout' },
                 { price: currentTradeData.optB.sl, color: '#f6465d', style: LightweightCharts.LineStyle.Dotted, title: 'Opt B: Stop Loss' },
                 { price: currentTradeData.optB.tp1, color: '#0ecb81', style: LightweightCharts.LineStyle.Dotted, title: 'Opt B: TP Breakout' }
@@ -610,7 +600,6 @@
             });
         }
 
-        // DIBUJAR NIVELES AUTOMÁTICOS VSA S/R
         function updateSRAutoLines(basePrice) {
             clearSRLines();
             if (!showSR) return;
@@ -640,58 +629,91 @@
             });
         }
 
-        // CARGA Y GENERACIÓN DE CANDLES HISTÓRICAS (SOLO CONFIRMADAS AL CIERRE)
-        function loadChartCandles(tf) {
-            const candles = [];
-            let price = currentBtcPrice || 85000;
-            const now = Math.floor(Date.now() / 1000);
-            const intervalSec = getIntervalSeconds(tf);
+        // CARGA VELAS HISTÓRICAS REALES DE BINANCE REST API
+        async function loadChartCandles(tf) {
+            const symbol = 'BTCUSDT';
+            const interval = tf.toLowerCase();
+            const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=100`;
 
-            for (let i = 100; i >= 0; i--) {
-                const time = now - (i * intervalSec);
-                const variation = (Math.random() - 0.49) * (price * 0.005);
-                const open = price;
-                const close = price + variation;
-                const high = Math.max(open, close) + Math.abs(variation * 0.5);
-                const low = Math.min(open, close) - Math.abs(variation * 0.5);
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
 
-                candles.push({ time, open, high, low, close });
-                price = close;
-            }
+                chartHistoricalCandles = data.map(item => ({
+                    time: Math.floor(item[0] / 1000),
+                    open: parseFloat(item[1]),
+                    high: parseFloat(item[2]),
+                    low: parseFloat(item[3]),
+                    close: parseFloat(item[4])
+                }));
 
-            candlestickSeries.setData(candles);
+                candlestickSeries.setData(chartHistoricalCandles);
 
-            // DIBUJO DE SEÑALES CONFIRMADAS SOLAMENTE EN VELAS CERRADAS (NO REPINTE)
-            if (showSignals) {
-                const markers = [];
-                const len = candles.length;
-                
-                // Las señales se posicionan estrictamente en las velas cerradas del historial [len - N]
-                if (len > 12) {
-                    markers.push({
-                        time: candles[len - 10].time,
-                        position: 'belowBar',
-                        color: '#0ecb81',
-                        shape: 'arrowUp',
-                        text: 'BUY CONFIRMADO [VSA]'
-                    });
-                    markers.push({
-                        time: candles[len - 4].time,
-                        position: 'aboveBar',
-                        color: '#f6465d',
-                        shape: 'arrowDown',
-                        text: 'SELL CONFIRMADO [VSA]'
-                    });
+                if (showSignals && chartHistoricalCandles.length > 12) {
+                    const len = chartHistoricalCandles.length;
+                    const markers = [
+                        {
+                            time: chartHistoricalCandles[len - 10].time,
+                            position: 'belowBar',
+                            color: '#0ecb81',
+                            shape: 'arrowUp',
+                            text: 'BUY CONFIRMADO [VSA]'
+                        },
+                        {
+                            time: chartHistoricalCandles[len - 4].time,
+                            position: 'aboveBar',
+                            color: '#f6465d',
+                            shape: 'arrowDown',
+                            text: 'SELL CONFIRMADO [VSA]'
+                        }
+                    ];
+                    candlestickSeries.setMarkers(markers);
+                } else {
+                    candlestickSeries.setMarkers([]);
                 }
-                candlestickSeries.setMarkers(markers);
-            } else {
-                candlestickSeries.setMarkers([]);
-            }
 
-            updateSRAutoLines(candles[candles.length - 1].close);
+                const lastClose = chartHistoricalCandles[chartHistoricalCandles.length - 1].close;
+                updateSRAutoLines(lastClose);
+                updateAnalysisAndTradeOptions();
+
+            } catch (err) {
+                console.error("Error cargando klines históricas de Binance:", err);
+            }
         }
 
-        // ACTUALIZACIÓN DE MATRIZ Y COMPRAS/VENTAS
+        // WEBSOCKET DE VELAS EN TIEMPO REAL (Binance Kline Stream)
+        function initCandleWebSocket(tf) {
+            if (candleWs) {
+                candleWs.close();
+            }
+
+            const interval = tf.toLowerCase();
+            const wsUrl = `wss://stream.binance.com:9443/ws/btcusdt@kline_${interval}`;
+            candleWs = new WebSocket(wsUrl);
+
+            candleWs.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                const kline = message.k;
+
+                const candleUpdate = {
+                    time: Math.floor(kline.t / 1000),
+                    open: parseFloat(kline.o),
+                    high: parseFloat(kline.h),
+                    low: parseFloat(kline.l),
+                    close: parseFloat(kline.c)
+                };
+
+                // Actualizar la vela actual en vivo en el gráfico
+                candlestickSeries.update(candleUpdate);
+                currentBtcPrice = candleUpdate.close;
+
+                // Si la vela se acaba de cerrar (Is Closed)
+                if (kline.x) {
+                    loadChartCandles(selectedTF);
+                }
+            };
+        }
+
         function renderMatrix() {
             const tbody = document.getElementById('matrix-tbody');
             if (!tbody) return;
@@ -715,7 +737,6 @@
                 tbody.appendChild(tr);
             });
 
-            // Actualizar acumulados
             const brokers = ['binance', 'bybit', 'coinbase', 'okx'];
             brokers.forEach(b => {
                 const buyPct = Math.floor(Math.random() * 40) + 30;
@@ -733,7 +754,6 @@
             });
         }
 
-        // CÁLCULO DE ESTRATEGIA E OPCIONES DE TRADE
         function updateAnalysisAndTradeOptions() {
             const price = currentBtcPrice;
             const bullScore = (Math.random() * 30 + 40).toFixed(1);
@@ -757,7 +777,6 @@
                 decBox.style.color = 'var(--yellow)';
             }
 
-            // Opción A: Retroceso (Cálculo estático)
             currentTradeData.optA.entryLow = parseFloat((price * 0.988).toFixed(2));
             currentTradeData.optA.entryHigh = parseFloat((price * 0.992).toFixed(2));
             currentTradeData.optA.sl = parseFloat((price * 0.980).toFixed(2));
@@ -769,7 +788,6 @@
             document.getElementById('opt-a-tp1').innerText = `$${currentTradeData.optA.tp1}`;
             document.getElementById('opt-a-tp2').innerText = `$${currentTradeData.optA.tp2}`;
 
-            // Opción B: Ruptura (Cálculo estático)
             currentTradeData.optB.entry = parseFloat((price * 1.005).toFixed(2));
             currentTradeData.optB.sl = parseFloat((price * 0.995).toFixed(2));
             currentTradeData.optB.tp1 = parseFloat((price * 1.025).toFixed(2));
@@ -780,11 +798,9 @@
 
             document.getElementById('cvd-val').innerText = `+${(Math.random() * 150).toFixed(2)} BTC`;
 
-            // RENDERIZAR OPCIONES EN EL GRÁFICO
             drawTradeOptionsOnChart();
         }
 
-        // WEBSOCKET BINANCE TICKER REALTIME
         function initBinanceWebSocket() {
             const wsStatus = document.getElementById('ws-status');
             const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
@@ -802,8 +818,6 @@
                 const high = parseFloat(data.h);
                 const low = parseFloat(data.l);
                 const change = parseFloat(data.P);
-
-                currentBtcPrice = price;
 
                 const priceEl = document.getElementById('binance-price');
                 if (priceEl) {
@@ -843,13 +857,12 @@
             };
         }
 
-        // INICIALIZACIÓN COMPLETA AL CARGAR EL DOM
         document.addEventListener('DOMContentLoaded', () => {
             initBinanceWebSocket();
             startCandleTimer(selectedTF);
             loadChartCandles(selectedTF);
+            initCandleWebSocket(selectedTF);
             renderMatrix();
-            updateAnalysisAndTradeOptions();
 
             window.addEventListener('resize', () => {
                 chart.applyOptions({ width: chartContainer.clientWidth, height: chartContainer.clientHeight });
