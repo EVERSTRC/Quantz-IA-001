@@ -83,6 +83,14 @@
         .btn-res { border-color: var(--red); color: var(--red); }
         .btn-res:hover { background-color: var(--red-bg); }
 
+        /* PANEL DE CONFIGURACIÓN DE ALERTAS */
+        .alert-config-card { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+        .alert-config-title { font-size: 0.75rem; font-weight: 700; color: var(--yellow); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .alert-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .alert-input-field { background: var(--panel-bg); border: 1px solid var(--border-color); color: #fff; padding: 6px; border-radius: 4px; font-size: 0.75rem; width: 100%; outline: none; }
+        .alert-toggles { display: flex; gap: 10px; margin-top: 8px; font-size: 0.72rem; color: var(--text-muted); }
+        .alert-toggle-item { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
         /* CONTENEDOR DEL GRÁFICO */
         #chart-wrapper { width: 100%; height: 480px; position: relative; background-color: #0b0e14; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
         #tv-chart { width: 100%; height: 100%; }
@@ -123,8 +131,11 @@
 
         .trade-option-card { background-color: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
         .option-header { display: flex; justify-content: space-between; align-items: center; color: var(--blue); font-weight: 700; font-size: 0.88rem; margin-bottom: 10px; }
+        .btn-action-group { display: flex; gap: 6px; }
         .btn-mt5 { background-color: var(--panel-bg); border: 1px solid var(--blue); color: var(--cyan); padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .btn-mt5:hover { background-color: var(--blue); color: #fff; }
+        .btn-telegram { background-color: var(--panel-bg); border: 1px solid #0088cc; color: #0088cc; padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn-telegram:hover { background-color: #0088cc; color: #fff; }
 
         .option-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
         .option-item { background-color: var(--panel-bg); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color); }
@@ -136,7 +147,7 @@
 </head>
 <body>
 
-    <!-- NAVBAR SUPERIOR CON TICKER EN TIEMPO REAL -->
+    <!-- NAVBAR SUPERIOR -->
     <header class="top-nav">
         <div class="brand">
             <span>Quantz IA</span>
@@ -154,4 +165,656 @@
             </div>
             <div class="ticker-item">
                 <span class="ticker-label">Mín 24h</span>
-                <span class="ticker-price" id="binance-low" style="font-size: 0.
+                <span class="ticker-price" id="binance-low" style="font-size: 0.95rem; color: #a0aec0;">$0.00</span>
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-label">Var 24h</span>
+                <span class="ticker-price" id="binance-change" style="font-size: 0.95rem;">0.00%</span>
+            </div>
+        </div>
+
+        <div class="status-badge">
+            <span class="pulse-dot"></span>
+            <span>WebSocket: <strong id="ws-status" style="color: #fff;">Conectando...</strong></span>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="main-container">
+
+        <!-- COLUMNA IZQUIERDA -->
+        <div>
+            <!-- SECCIÓN GRÁFICO -->
+            <section class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📈 S/R Ballenas VSA + Señales BUY/SELL (<span class="selected-tf-tag">15m</span>)</span>
+                    <div class="chart-controls">
+                        <button class="btn-line active" id="btn-toggle-sr" onclick="toggleModule('sr')">S/R Ballenas VSA</button>
+                        <button class="btn-line active" id="btn-toggle-signals" onclick="toggleModule('signals')">Señales Confirmadas</button>
+                        <button class="btn-line active" id="btn-toggle-options" onclick="toggleModule('options')">Ver OPCIONES A/B en Gráfico</button>
+                        <button class="btn-line active" id="btn-toggle-dash" onclick="toggleModule('dash')">Dashboard MTF</button>
+
+                        <input type="number" id="manual-price-input" class="input-price" placeholder="Precio..." step="10">
+                        <button class="btn-line" onclick="setCurrentPriceInput()">Precio Actual</button>
+                        <button class="btn-line btn-sup" onclick="addManualLine('support')">+ Soporte</button>
+                        <button class="btn-line btn-res" onclick="addManualLine('resistance')">+ Resistencia</button>
+                        <button class="btn-line" onclick="clearManualLines()" style="color: var(--text-muted);">🗑️ Borrar</button>
+                    </div>
+                </div>
+                <div class="panel-body" style="padding: 10px;">
+                    <div id="chart-wrapper">
+                        <!-- CAJA DEL TIMER VELA -->
+                        <div class="candle-timer-box">
+                            <div class="timer-row">
+                                <span class="timer-lbl">Cierre Vela (<span class="selected-tf-tag">15m</span>)</span>
+                                <span class="timer-val" id="candle-timer-val">00:00</span>
+                            </div>
+                            <div class="timer-progress-bg">
+                                <div class="timer-progress-fill" id="candle-timer-bar"></div>
+                            </div>
+                        </div>
+
+                        <!-- TABLA FLOTANTE DE VSA MULTI-TIMEFRAME -->
+                        <div class="vsa-dashboard-floating" id="vsa-floating-dash">
+                            <table class="vsa-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: left;">Timeframe</th>
+                                        <th>Señal VSA</th>
+                                        <th>Vol. Transado</th>
+                                        <th>% Compra</th>
+                                        <th>% Venta</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td style="text-align: left; font-weight: bold;">5 Minutos</td><td class="tag-sell-vsa">SELL</td><td>29.10</td><td style="color:var(--cyan)">37.9%</td><td style="color:var(--red)">62.1%</td></tr>
+                                    <tr><td style="text-align: left; font-weight: bold;">15 Minutos</td><td class="tag-sell-vsa">SELL</td><td>47.58</td><td style="color:var(--green)">91.5%</td><td style="color:var(--red)">8.5%</td></tr>
+                                    <tr><td style="text-align: left; font-weight: bold;">1 Hora</td><td class="tag-sell-vsa">SELL</td><td>363.74</td><td style="color:var(--cyan)">11.4%</td><td style="color:var(--red)">88.6%</td></tr>
+                                    <tr><td style="text-align: left; font-weight: bold;">4 Horas</td><td class="tag-sell-vsa">SELL</td><td>1.40K</td><td style="color:var(--cyan)">29.3%</td><td style="color:var(--red)">70.7%</td></tr>
+                                    <tr><td style="text-align: left; font-weight: bold;">1 Diario</td><td class="tag-buy-vsa">BUY</td><td>16.19K</td><td style="color:var(--green)">39.2%</td><td style="color:var(--red)">60.8%</td></tr>
+                                    <tr><td style="text-align: left; font-weight: bold;">1 Semana</td><td class="tag-buy-vsa">BUY</td><td>111.09K</td><td style="color:var(--green)">85.2%</td><td style="color:var(--red)">14.8%</td></tr>
+                                    <tr><td style="text-align: left; font-weight: bold;">1 Mes</td><td class="tag-buy-vsa">BUY</td><td>0.59</td><td style="color:var(--green)">78.2%</td><td style="color:var(--red)">21.8%</td></tr>
+                                </tbody>
+                            </table>
+                            <div class="vsa-config-box">
+                                <span style="font-weight: bold; color: var(--text-main);">CONFIGURACIÓN VSA</span>
+                                <div class="vsa-config-row"><span>Período Prom. Vol:</span><input type="number" class="vsa-config-input" value="20"></div>
+                                <div class="vsa-config-row"><span>Mult. Vol Ballena:</span><input type="number" class="vsa-config-input" value="1.8" step="0.1"></div>
+                            </div>
+                        </div>
+
+                        <div id="tv-chart"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MATRIZ MULTI-BROKER -->
+            <section class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📊 Matriz Multi-Broker por Temporalidad</span>
+                </div>
+                <div class="panel-body">
+                    <div style="overflow-x: auto;">
+                        <table class="pro-table">
+                            <thead>
+                                <tr>
+                                    <th>TF</th>
+                                    <th>Binance (30%)</th>
+                                    <th>Bybit (30%)</th>
+                                    <th>Coinbase (20%)</th>
+                                    <th>OKX (20%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matrix-tbody">
+                                <tr><td>1m</td><td class="cell-sell">SELL</td><td class="cell-sell">SELL</td><td class="cell-buy">BUY</td><td class="cell-sell">SELL</td></tr>
+                                <tr><td>5m</td><td class="cell-sell">SELL</td><td class="cell-sell">SELL</td><td class="cell-sell">SELL</td><td class="cell-sell">SELL</td></tr>
+                                <tr class="row-active"><td>15m</td><td class="cell-sell">SELL</td><td class="cell-sell">SELL</td><td class="cell-buy">BUY</td><td class="cell-sell">SELL</td></tr>
+                                <tr><td>1h</td><td class="cell-sell">SELL</td><td class="cell-sell">SELL</td><td class="cell-sell">SELL</td><td class="cell-sell">SELL</td></tr>
+                                <tr><td>4h</td><td class="cell-buy">BUY</td><td class="cell-buy">BUY</td><td class="cell-buy">BUY</td><td class="cell-sell">SELL</td></tr>
+                                <tr><td>1D</td><td class="cell-buy">BUY</td><td class="cell-buy">BUY</td><td class="cell-buy">BUY</td><td class="cell-buy">BUY</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ACUMULADO POR BROKER -->
+            <section class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📈 Acumulado Total por Broker (Compras vs Ventas)</span>
+                </div>
+                <div class="panel-body">
+                    <div class="broker-accum-grid">
+                        <div class="broker-card">
+                            <div class="broker-card-header"><span class="broker-name">Binance</span><span class="broker-status-tag cell-sell">BEARISH</span></div>
+                            <div class="accum-val" id="binance-val">35% BUY</div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 35%; background-color: var(--red);"></div></div>
+                        </div>
+                        <div class="broker-card">
+                            <div class="broker-card-header"><span class="broker-name">Bybit</span><span class="broker-status-tag cell-sell">BEARISH</span></div>
+                            <div class="accum-val" id="bybit-val">28% BUY</div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 28%; background-color: var(--red);"></div></div>
+                        </div>
+                        <div class="broker-card">
+                            <div class="broker-card-header"><span class="broker-name">Coinbase</span><span class="broker-status-tag cell-buy">BULLISH</span></div>
+                            <div class="accum-val" id="coinbase-val">62% BUY</div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 62%; background-color: var(--green);"></div></div>
+                        </div>
+                        <div class="broker-card">
+                            <div class="broker-card-header"><span class="broker-name">OKX</span><span class="broker-status-tag cell-sell">BEARISH</span></div>
+                            <div class="accum-val" id="okx-val">40% BUY</div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 40%; background-color: var(--red);"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- COLUMNA DERECHA -->
+        <section class="panel">
+            <div class="panel-header">
+                <span class="panel-title">🧠 Motor de Decisión & Estrategia IA</span>
+                <select class="select-tf" id="tf-analysis-select" onchange="onTimeframeChange()">
+                    <option value="1m">Temporalidad: 1m</option>
+                    <option value="5m">Temporalidad: 5m</option>
+                    <option value="15m" selected>Temporalidad: 15m</option>
+                    <option value="1h">Temporalidad: 1h</option>
+                    <option value="4h">Temporalidad: 4h</option>
+                    <option value="1D">Temporalidad: 1D</option>
+                </select>
+            </div>
+            <div class="panel-body">
+
+                <!-- CONFIGURACIÓN DE ALERTAS TELEGRAM Y SONIDO -->
+                <div class="alert-config-card">
+                    <div class="alert-config-title">
+                        <span>🔔 Configuración de Alertas</span>
+                        <button class="btn-line" onclick="testAudioAlert('buy')">🔊 Probar Audio</button>
+                    </div>
+                    <div class="alert-inputs">
+                        <input type="password" id="tg-bot-token" class="alert-input-field" placeholder="Telegram Bot Token">
+                        <input type="text" id="tg-chat-id" class="alert-input-field" placeholder="Telegram Chat ID">
+                    </div>
+                    <div class="alert-toggles">
+                        <label class="alert-toggle-item">
+                            <input type="checkbox" id="chk-audio" checked> Alerta Sonora
+                        </label>
+                        <label class="alert-toggle-item">
+                            <input type="checkbox" id="chk-telegram" checked> Enviar a Telegram
+                        </label>
+                        <button class="btn-telegram" style="margin-left: auto;" onclick="testTelegramAlert()">📲 Probar Telegram</button>
+                    </div>
+                </div>
+
+                <!-- SCORE IA -->
+                <div class="ai-overview">
+                    <div class="ai-card">
+                        <span class="ai-card-title">Confianza Alcista (<span class="selected-tf-tag">15m</span>)</span>
+                        <span class="ai-card-value" id="score-bull-val" style="color: var(--green);">24.5%</span>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="score-bull-bar" style="width: 24.5%; background-color: var(--green);"></div></div>
+                    </div>
+                    <div class="ai-card">
+                        <span class="ai-card-title">Confianza Bajista (<span class="selected-tf-tag">15m</span>)</span>
+                        <span class="ai-card-value" id="score-bear-val" style="color: var(--red);">75.5%</span>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="score-bear-bar" style="width: 75.5%; background-color: var(--red);"></div></div>
+                    </div>
+                </div>
+
+                <!-- BANDEROLA DE RECOMENDACIÓN FINAL -->
+                <div class="decision-banner" id="decision-box">
+                    <div class="decision-title">RECOMENDACIÓN FINAL IA (<span class="selected-tf-tag">15m</span>)</div>
+                    <div class="decision-value" id="decision-text" style="color: var(--red);">VENTA FUERTE / SHORT</div>
+                </div>
+
+                <!-- MÉTRICAS CUANTITATIVAS AVANZADAS -->
+                <div class="metrics-grid-4">
+                    <div class="metric-card">
+                        <div class="lbl">Divergencia Smart Money</div>
+                        <div class="val" id="divergence-val" style="color: var(--yellow);">Venta Institucional</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="lbl">Net Delta CVD (Flujo)</div>
+                        <div class="val" id="cvd-val" style="color: var(--red);">-142.50 BTC</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="lbl">Ratio Riesgo/Beneficio</div>
+                        <div class="val" id="rr-val" style="color: var(--yellow);">1 : 2.8</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="lbl">Régimen Mercado</div>
+                        <div class="val" id="volatility-val" style="color: #ffffff;">Tendencia Bajista</div>
+                    </div>
+                </div>
+
+                <!-- OPCIÓN A: RETROCESO -->
+                <div class="trade-option-card">
+                    <div class="option-header">
+                        <span>🔹 OPCIÓN A: Retroceso al Soporte</span>
+                        <div class="btn-action-group">
+                            <button class="btn-telegram" onclick="sendOptionToTelegram('A')">✈️ Telegram</button>
+                            <button class="btn-mt5" onclick="sendToMetaTrader5('A')">📲 MT5</button>
+                        </div>
+                    </div>
+                    <div class="option-grid">
+                        <div class="option-item"><div class="lbl">Zona Entrada</div><div class="val" id="opt-a-entry" style="color: var(--yellow);">$86,200</div></div>
+                        <div class="option-item"><div class="lbl">Stop Loss (SL)</div><div class="val" id="opt-a-sl" style="color: var(--red);">$86,850</div></div>
+                        <div class="option-item"><div class="lbl">Take Profit 1</div><div class="val" id="opt-a-tp1" style="color: var(--green);">$85,100</div></div>
+                        <div class="option-item"><div class="lbl">Take Profit 2</div><div class="val" id="opt-a-tp2" style="color: var(--green);">$84,300</div></div>
+                    </div>
+                </div>
+
+                <!-- OPCIÓN B: RUPTURA -->
+                <div class="trade-option-card">
+                    <div class="option-header">
+                        <span>🔹 OPCIÓN B: Ruptura / Breakout</span>
+                        <div class="btn-action-group">
+                            <button class="btn-telegram" onclick="sendOptionToTelegram('B')">✈️ Telegram</button>
+                            <button class="btn-mt5" onclick="sendToMetaTrader5('B')">📲 MT5</button>
+                        </div>
+                    </div>
+                    <div class="option-grid">
+                        <div class="option-item"><div class="lbl">Entrada Ruptura</div><div class="val" id="opt-b-entry" style="color: var(--blue);">$85,450</div></div>
+                        <div class="option-item"><div class="lbl">Stop Loss (SL)</div><div class="val" id="opt-b-sl" style="color: var(--red);">$86,100</div></div>
+                        <div class="option-item"><div class="lbl">Take Profit Target</div><div class="val" id="opt-b-tp1" style="color: var(--green);">$83,900</div></div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- SCRIPT DE NAVEGACIÓN Y ALERTAS -->
+    <script>
+        const TIMEFRAMES = [
+            { label: '1m', binance: '1m' },
+            { label: '5m', binance: '5m' },
+            { label: '15m', binance: '15m' },
+            { label: '1h', binance: '1h' },
+            { label: '4h', binance: '4h' },
+            { label: '1D', binance: '1d' }
+        ];
+
+        let selectedTF = '15m';
+        let currentBtcPrice = 85975.67;
+        let lastPrice = 0;
+        let userPriceLines = [];
+        let timerInterval = null;
+
+        let showSR = true;
+        let showSignals = true;
+        let showTradeOptions = true;
+
+        let currentTradeData = {
+            optA: { entryLow: 86200, entryHigh: 86300, sl: 86850, tp1: 85100, tp2: 84300 },
+            optB: { entry: 85450, sl: 86100, tp1: 83900 }
+        };
+
+        // INICIALIZACIÓN DE LIGHTWEIGHT CHARTS
+        const chartContainer = document.getElementById('tv-chart');
+        const chart = LightweightCharts.createChart(chartContainer, {
+            layout: { background: { type: 'solid', color: '#0b0e14' }, textColor: '#d1d4dc' },
+            grid: { vertLines: { color: 'rgba(42, 46, 57, 0.3)' }, horzLines: { color: 'rgba(42, 46, 57, 0.3)' } },
+            timeScale: { borderColor: 'rgba(197, 203, 206, 0.8)', timeVisible: true, secondsVisible: false },
+            rightPriceScale: { autoScale: true }
+        });
+
+        const candlestickSeries = chart.addCandlestickSeries({
+            upColor: '#0ecb81',
+            downColor: '#f6465d',
+            borderVisible: false,
+            wickUpColor: '#0ecb81',
+            wickDownColor: '#f6465d'
+        });
+
+        let candleWs = null;
+        let tickerWs = null;
+
+        // 🔊 MOTOR DE AUDIO (WEB AUDIO API - SINTETIZADOR)
+        function playAudioBeep(type = 'buy') {
+            const isAudioEnabled = document.getElementById('chk-audio').checked;
+            if (!isAudioEnabled) return;
+
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const audioCtx = new AudioContext();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'buy') {
+                    // Tono agudo y ascendente (Señal de Compra)
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3); // A5
+                } else {
+                    // Tono grave y descendente (Señal de Venta)
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
+                    osc.frequency.exponentialRampToValueAtTime(220, audioCtx.currentTime + 0.3); // A3
+                }
+
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.3);
+            } catch (e) {
+                console.error("Error al reproducir audio:", e);
+            }
+        }
+
+        function testAudioAlert(type) {
+            playAudioBeep(type);
+        }
+
+        // 📲 MOTOR DE ALERTAS A TELEGRAM
+        async function sendTelegramMessage(textMessage) {
+            const isTgEnabled = document.getElementById('chk-telegram').checked;
+            if (!isTgEnabled) return;
+
+            const botToken = document.getElementById('tg-bot-token').value.trim();
+            const chatId = document.getElementById('tg-chat-id').value.trim();
+
+            if (!botToken || !chatId) {
+                alert('⚠️ Ingresa tu Bot Token y Chat ID de Telegram.');
+                return;
+            }
+
+            const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: textMessage,
+                        parse_mode: 'HTML'
+                    })
+                });
+                const resData = await response.json();
+                if (resData.ok) {
+                    alert('✅ Alerta enviada a Telegram con éxito.');
+                } else {
+                    alert(`❌ Error Telegram: ${resData.description}`);
+                }
+            } catch (err) {
+                alert('❌ Error de red al conectar con Telegram API.');
+            }
+        }
+
+        function testTelegramAlert() {
+            const msg = `🚨 <b>TEST DE ALERTA - QUANTZ IA</b> 🚨\n\n🟢 Conexión exitosa. Tu terminal notificará los trades aquí.`;
+            sendTelegramMessage(msg);
+        }
+
+        function sendOptionToTelegram(optionType) {
+            let msg = '';
+            if (optionType === 'A') {
+                msg = `🚨 <b>NUEVA SEÑAL OPCIÓN A (Retroceso)</b> 🚨\n` +
+                      `📈 <b>Símbolo:</b> BTC/USDT (${selectedTF})\n` +
+                      `🎯 <b>Entrada:</b> $${currentTradeData.optA.entryLow.toLocaleString()}\n` +
+                      `🛑 <b>Stop Loss:</b> $${currentTradeData.optA.sl.toLocaleString()}\n` +
+                      `🏁 <b>Take Profit 1:</b> $${currentTradeData.optA.tp1.toLocaleString()}\n` +
+                      `🏁 <b>Take Profit 2:</b> $${currentTradeData.optA.tp2.toLocaleString()}`;
+            } else {
+                msg = `🚨 <b>NUEVA SEÑAL OPCIÓN B (Ruptura)</b> 🚨\n` +
+                      `📈 <b>Símbolo:</b> BTC/USDT (${selectedTF})\n` +
+                      `🎯 <b>Entrada Ruptura:</b> $${currentTradeData.optB.entry.toLocaleString()}\n` +
+                      `🛑 <b>Stop Loss:</b> $${currentTradeData.optB.sl.toLocaleString()}\n` +
+                      `🏁 <b>Take Profit:</b> $${currentTradeData.optB.tp1.toLocaleString()}`;
+            }
+
+            playAudioBeep('buy');
+            sendTelegramMessage(msg);
+        }
+
+        function toggleModule(mod) {
+            if (mod === 'sr') {
+                showSR = !showSR;
+                document.getElementById('btn-toggle-sr').classList.toggle('active', showSR);
+            } else if (mod === 'signals') {
+                showSignals = !showSignals;
+                document.getElementById('btn-toggle-signals').classList.toggle('active', showSignals);
+            } else if (mod === 'options') {
+                showTradeOptions = !showTradeOptions;
+                document.getElementById('btn-toggle-options').classList.toggle('active', showTradeOptions);
+            } else if (mod === 'dash') {
+                const dash = document.getElementById('vsa-floating-dash');
+                const isHidden = dash.style.display === 'none';
+                dash.style.display = isHidden ? 'block' : 'none';
+                document.getElementById('btn-toggle-dash').classList.toggle('active', isHidden);
+            }
+        }
+
+        async function sendToMetaTrader5(optionType) {
+            let entryLow, entryHigh, sl, tp1, tp2;
+
+            if (optionType === 'A') {
+                entryLow = currentTradeData.optA.entryLow;
+                entryHigh = currentTradeData.optA.entryHigh;
+                sl = currentTradeData.optA.sl;
+                tp1 = currentTradeData.optA.tp1;
+                tp2 = currentTradeData.optA.tp2;
+            } else {
+                entryLow = currentTradeData.optB.entry;
+                entryHigh = entryLow;
+                sl = currentTradeData.optB.sl;
+                tp1 = currentTradeData.optB.tp1;
+                tp2 = 0;
+            }
+
+            const payload = {
+                symbol: "BTCUSD",
+                type: optionType,
+                entry_low: entryLow,
+                entry_high: entryHigh,
+                sl: sl,
+                tp1: tp1,
+                tp2: tp2,
+                timestamp: Date.now()
+            };
+
+            try {
+                await fetch('http://127.0.0.1:8080/signals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                playAudioBeep('buy');
+                alert('✅ Nivel y zonas enviadas exitosamente a MetaTrader 5.');
+            } catch (e) {
+                alert('⚠️ Conexión lista: Asegúrate de tener ejecutando el script/bridge local de MT5 en el puerto 8080.');
+            }
+        }
+
+        function getIntervalSeconds(tf) {
+            switch (tf) {
+                case '1m': return 60;
+                case '5m': return 300;
+                case '15m': return 900;
+                case '1h': return 3600;
+                case '4h': return 14400;
+                case '1D': return 86400;
+                default: return 900;
+            }
+        }
+
+        function startCandleTimer(tf) {
+            if (timerInterval) clearInterval(timerInterval);
+            const duration = getIntervalSeconds(tf);
+
+            const timerValEl = document.getElementById('candle-timer-val');
+            const timerBarEl = document.getElementById('candle-timer-bar');
+
+            timerInterval = setInterval(() => {
+                const now = Math.floor(Date.now() / 1000);
+                const elapsed = now % duration;
+                const remaining = duration - elapsed;
+
+                const mins = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+
+                if (timerValEl) {
+                    timerValEl.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                }
+
+                if (timerBarEl) {
+                    const progressPercent = ((duration - remaining) / duration) * 100;
+                    timerBarEl.style.width = `${progressPercent}%`;
+                }
+            }, 1000);
+        }
+
+        function onTimeframeChange() {
+            const selectEl = document.getElementById('tf-analysis-select');
+            selectedTF = selectEl.value;
+
+            document.querySelectorAll('.selected-tf-tag').forEach(el => {
+                el.innerText = selectedTF;
+            });
+
+            startCandleTimer(selectedTF);
+            connectBinanceCandleWS(selectedTF);
+            loadHistoricalData(selectedTF);
+        }
+
+        function connectBinanceCandleWS(tf) {
+            if (candleWs) candleWs.close();
+
+            const tfObj = TIMEFRAMES.find(t => t.label === tf);
+            const streamInterval = tfObj ? tfObj.binance : '15m';
+            const wsUrl = `wss://stream.binance.com:9443/ws/btcusdt@kline_${streamInterval}`;
+
+            candleWs = new WebSocket(wsUrl);
+
+            candleWs.onopen = () => {
+                const statusEl = document.getElementById('ws-status');
+                if (statusEl) {
+                    statusEl.innerText = 'CONECTADO (' + tf + ')';
+                    statusEl.style.color = 'var(--green)';
+                }
+            };
+
+            candleWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.e === 'kline') {
+                    const k = data.k;
+                    const candle = {
+                        time: k.t / 1000,
+                        open: parseFloat(k.o),
+                        high: parseFloat(k.h),
+                        low: parseFloat(k.l),
+                        close: parseFloat(k.c)
+                    };
+                    candlestickSeries.update(candle);
+                    updateTickerUI(candle.close);
+                }
+            };
+
+            candleWs.onerror = () => {
+                const statusEl = document.getElementById('ws-status');
+                if (statusEl) {
+                    statusEl.innerText = 'ERROR';
+                    statusEl.style.color = 'var(--red)';
+                }
+            };
+        }
+
+        function connectBinanceTickerWS() {
+            if (tickerWs) tickerWs.close();
+            tickerWs = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
+
+            tickerWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const highEl = document.getElementById('binance-high');
+                const lowEl = document.getElementById('binance-low');
+                const changeEl = document.getElementById('binance-change');
+
+                if (highEl) highEl.innerText = `$${parseFloat(data.h).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                if (lowEl) lowEl.innerText = `$${parseFloat(data.l).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                if (changeEl) {
+                    const chg = parseFloat(data.P);
+                    changeEl.innerText = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`;
+                    changeEl.style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
+                }
+            };
+        }
+
+        async function loadHistoricalData(tf) {
+            const tfObj = TIMEFRAMES.find(t => t.label === tf);
+            const interval = tfObj ? tfObj.binance : '15m';
+            try {
+                const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${interval}&limit=200`);
+                const data = await response.json();
+                const candles = data.map(d => ({
+                    time: d[0] / 1000,
+                    open: parseFloat(d[1]),
+                    high: parseFloat(d[2]),
+                    low: parseFloat(d[3]),
+                    close: parseFloat(d[4])
+                }));
+                candlestickSeries.setData(candles);
+                if (candles.length > 0) {
+                    const lastCandle = candles[candles.length - 1];
+                    updateTickerUI(lastCandle.close);
+                }
+            } catch (e) {
+                console.error("Error al cargar datos históricos de Binance:", e);
+            }
+        }
+
+        function updateTickerUI(price) {
+            const priceEl = document.getElementById('binance-price');
+            if (!priceEl) return;
+
+            if (lastPrice > 0) {
+                priceEl.className = price > lastPrice ? 'ticker-price price-up' : 'ticker-price price-down';
+            }
+            lastPrice = price;
+            currentBtcPrice = price;
+            priceEl.innerText = `$${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        }
+
+        function setCurrentPriceInput() {
+            document.getElementById('manual-price-input').value = currentBtcPrice.toFixed(2);
+        }
+
+        function addManualLine(type) {
+            const val = parseFloat(document.getElementById('manual-price-input').value);
+            if (isNaN(val)) return;
+
+            const color = type === 'support' ? '#0ecb81' : '#f6465d';
+            const line = candlestickSeries.createPriceLine({
+                price: val,
+                color: color,
+                lineWidth: 2,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                axisLabelVisible: true,
+                title: type.toUpperCase()
+            });
+            userPriceLines.push(line);
+        }
+
+        function clearManualLines() {
+            userPriceLines.forEach(line => candlestickSeries.removePriceLine(line));
+            userPriceLines = [];
+        }
+
+        window.addEventListener('load', () => {
+            onTimeframeChange();
+            connectBinanceTickerWS();
+        });
+
+        window.addEventListener('resize', () => {
+            chart.applyOptions({
+                width: chartContainer.clientWidth,
+                height: chartContainer.clientHeight
+            });
+        });
+    </script>
+</body>
+</html>
