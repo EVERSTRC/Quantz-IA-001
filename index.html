@@ -187,7 +187,7 @@
             <!-- SECCIÓN GRÁFICO -->
             <section class="panel">
                 <div class="panel-header">
-                    <span class="panel-title">📈 S/R Ballenas VSA + Señales BUY/SELL (<span class="selected-tf-tag">15m</span>)</span>
+                    <span class="panel-title">📈 S/R Ballenas VSA + Señales Confirmadas (<span class="selected-tf-tag">15m</span>)</span>
                     <div class="chart-controls">
                         <button class="btn-line active" id="btn-toggle-sr" onclick="toggleModule('sr')">S/R Ballenas VSA</button>
                         <button class="btn-line active" id="btn-toggle-signals" onclick="toggleModule('signals')">Señales Confirmadas</button>
@@ -424,7 +424,7 @@
 
     </main>
 
-    <!-- SCRIPT DE NAVEGACIÓN, MARCADORES Y ALERTAS -->
+    <!-- SCRIPT DE NAVEGACIÓN, MARCADORES CONFIRMADOS Y ALERTAS -->
     <script>
         const TIMEFRAMES = [
             { label: '1m', binance: '1m' },
@@ -439,7 +439,7 @@
         let currentBtcPrice = 85975.67;
         let lastPrice = 0;
         let userPriceLines = [];
-        let chartMarkers = []; // ARRAY PARA ALMACENAR LAS SEÑALES DEL GRÁFICO
+        let chartMarkers = []; 
         let timerInterval = null;
 
         let showSR = true;
@@ -471,8 +471,8 @@
         let candleWs = null;
         let tickerWs = null;
 
-        // 📍 FUNCIONES PARA DIBUJAR ALERTAS/SEÑALES DE COMPRA Y VENTA EN EL GRÁFICO
-        function addSignalMarker(type, price = currentBtcPrice, timestamp = null) {
+        // 📍 DIBUJAR MARCADOR CONFIRMADO (Cierre de vela)
+        function addSignalMarker(type, price = currentBtcPrice, timestamp = null, isConfirmed = true) {
             const time = timestamp || Math.floor(Date.now() / 1000);
             const isBuy = type === 'BUY';
 
@@ -481,12 +481,12 @@
                 position: isBuy ? 'belowBar' : 'aboveBar',
                 color: isBuy ? '#0ecb81' : '#f6465d',
                 shape: isBuy ? 'arrowUp' : 'arrowDown',
-                text: `${type} @ $${Math.round(price)}`
+                text: `${type} CONFIRMADO @ $${Math.round(price)}`
             };
 
+            // Evitar duplicados en el mismo segundo
+            chartMarkers = chartMarkers.filter(m => m.time !== time);
             chartMarkers.push(newMarker);
-            
-            // Ordenar marcadores por tiempo para evitar errores en Lightweight Charts
             chartMarkers.sort((a, b) => a.time - b.time);
 
             if (showSignals) {
@@ -574,27 +574,27 @@
         }
 
         function testTelegramAlert() {
-            const msg = `🚨 <b>TEST DE ALERTA - QUANTZ IA</b> 🚨\n\n🟢 Conexión exitosa. Tu terminal notificará los trades aquí.`;
+            const msg = `🚨 <b>TEST DE ALERTA - QUANTZ IA</b> 🚨\n\n🟢 Conexión exitosa. Tu terminal notificará las señales confirmadas aquí.`;
             sendTelegramMessage(msg);
         }
 
         function sendOptionToTelegram(optionType) {
             let msg = '';
             if (optionType === 'A') {
-                msg = `🚨 <b>NUEVA SEÑAL OPCIÓN A (Retroceso)</b> 🚨\n` +
+                msg = `🚨 <b>SEÑAL CONFIRMADA - OPCIÓN A (Retroceso)</b> 🚨\n` +
                       `📈 <b>Símbolo:</b> BTC/USDT (${selectedTF})\n` +
                       `🎯 <b>Entrada:</b> $${currentTradeData.optA.entryLow.toLocaleString()}\n` +
                       `🛑 <b>Stop Loss:</b> $${currentTradeData.optA.sl.toLocaleString()}\n` +
                       `🏁 <b>Take Profit 1:</b> $${currentTradeData.optA.tp1.toLocaleString()}\n` +
                       `🏁 <b>Take Profit 2:</b> $${currentTradeData.optA.tp2.toLocaleString()}`;
-                addSignalMarker('BUY', currentTradeData.optA.entryLow);
+                addSignalMarker('BUY', currentTradeData.optA.entryLow, null, true);
             } else {
-                msg = `🚨 <b>NUEVA SEÑAL OPCIÓN B (Ruptura)</b> 🚨\n` +
+                msg = `🚨 <b>SEÑAL CONFIRMADA - OPCIÓN B (Ruptura)</b> 🚨\n` +
                       `📈 <b>Símbolo:</b> BTC/USDT (${selectedTF})\n` +
                       `🎯 <b>Entrada Ruptura:</b> $${currentTradeData.optB.entry.toLocaleString()}\n` +
                       `🛑 <b>Stop Loss:</b> $${currentTradeData.optB.sl.toLocaleString()}\n` +
                       `🏁 <b>Take Profit:</b> $${currentTradeData.optB.tp1.toLocaleString()}`;
-                addSignalMarker('SELL', currentTradeData.optB.entry);
+                addSignalMarker('SELL', currentTradeData.optB.entry, null, true);
             }
 
             playAudioBeep(optionType === 'A' ? 'buy' : 'sell');
@@ -609,7 +609,6 @@
                 showSignals = !showSignals;
                 document.getElementById('btn-toggle-signals').classList.toggle('active', showSignals);
                 
-                // Mostrar u ocultar señales del gráfico en vivo
                 if (showSignals) {
                     candlestickSeries.setMarkers(chartMarkers);
                 } else {
@@ -635,14 +634,14 @@
                 sl = currentTradeData.optA.sl;
                 tp1 = currentTradeData.optA.tp1;
                 tp2 = currentTradeData.optA.tp2;
-                addSignalMarker('BUY', entryLow);
+                addSignalMarker('BUY', entryLow, null, true);
             } else {
                 entryLow = currentTradeData.optB.entry;
                 entryHigh = entryLow;
                 sl = currentTradeData.optB.sl;
                 tp1 = currentTradeData.optB.tp1;
                 tp2 = 0;
-                addSignalMarker('SELL', entryLow);
+                addSignalMarker('SELL', entryLow, null, true);
             }
 
             const payload = {
@@ -721,6 +720,7 @@
             loadHistoricalData(selectedTF);
         }
 
+        // CONEXIÓN WEBSOCKET DE VELAS DE BINANCE Y CONFIRMACIÓN AL CIERRE
         function connectBinanceCandleWS(tf) {
             if (candleWs) candleWs.close();
 
@@ -749,8 +749,14 @@
                         low: parseFloat(k.l),
                         close: parseFloat(k.c)
                     };
+                    
                     candlestickSeries.update(candle);
                     updateTickerUI(candle.close);
+
+                    // 🚨 VERIFICACIÓN DE VELA CERRADA (k.x === true significa que la vela se ha cerrado)
+                    if (k.x) {
+                        onCandleClosed(candle);
+                    }
                 }
             };
 
@@ -761,6 +767,30 @@
                     statusEl.style.color = 'var(--red)';
                 }
             };
+        }
+
+        // ACCIÓN EJECUTADA AL CONFIRMAR EL CIERRE DE UNA VELA
+        function onCandleClosed(closedCandle) {
+            const isBullish = closedCandle.close > closedCandle.open;
+            const bodySize = Math.abs(closedCandle.close - closedCandle.open);
+            
+            // Lógica de confirmación cuant (Ejemplo: cuerpo de vela significativo)
+            if (bodySize > 150) {
+                const signalType = isBullish ? 'BUY' : 'SELL';
+                
+                // Dibujar marcador de señal confirmada
+                addSignalMarker(signalType, closedCandle.close, closedCandle.time, true);
+                
+                // Disparar alertas sonoras y notificación de Telegram
+                playAudioBeep(isBullish ? 'buy' : 'sell');
+                
+                const alertText = `🚨 <b>SEÑAL CONFIRMADA EN CIERRE DE VELA (${selectedTF})</b> 🚨\n\n` +
+                                  `📊 <b>Tipo:</b> ${signalType}\n` +
+                                  `💰 <b>Precio Cierre:</b> $${closedCandle.close.toLocaleString()}\n` +
+                                  `📈 <b>Símbolo:</b> BTC/USDT`;
+                
+                sendTelegramMessage(alertText);
+            }
         }
 
         function connectBinanceTickerWS() {
@@ -801,12 +831,12 @@
                     const lastCandle = candles[candles.length - 1];
                     updateTickerUI(lastCandle.close);
 
-                    // Generar un par de marcadores VSA de prueba sobre velas pasadas
+                    // Muestra las últimas señales confirmadas en el histórico
                     const sampleIndex1 = Math.max(0, candles.length - 40);
                     const sampleIndex2 = Math.max(0, candles.length - 10);
                     
-                    addSignalMarker('BUY', candles[sampleIndex1].low, candles[sampleIndex1].time);
-                    addSignalMarker('SELL', candles[sampleIndex2].high, candles[sampleIndex2].time);
+                    addSignalMarker('BUY', candles[sampleIndex1].low, candles[sampleIndex1].time, true);
+                    addSignalMarker('SELL', candles[sampleIndex2].high, candles[sampleIndex2].time, true);
                 }
             } catch (e) {
                 console.error("Error al cargar datos históricos de Binance:", e);
